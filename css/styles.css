@@ -255,14 +255,15 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 .stepper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   background: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px;
+  padding: 6px;
 }
 .stepper button {
-  width: 48px; height: 48px;
+  width: 44px; height: 48px;
+  flex-shrink: 0;
   border-radius: 10px;
   background: var(--bg-elev-2);
   color: var(--accent);
@@ -274,14 +275,16 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 .stepper button:active { transform: scale(0.9); }
 .stepper input {
   flex: 1;
+  width: 100%;
   text-align: center;
   background: none;
   border: none;
   color: var(--text);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
   outline: none;
   min-width: 0;
+  padding: 0;
 }
 
 /* ---------------------------- Bottom Nav --------------------------------- */

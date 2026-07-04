@@ -6,10 +6,11 @@ import { applyTheme } from '../app.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 
-const VERSION = 'V1.0.0';
+const VERSION = '1.01';
 
 const CHANGELOG = [
-  ['V1.0.0', 'Primera versión: rutinas, biblioteca de +150 ejercicios, entrenamiento rápido, historial, estadísticas, progresión inteligente y PWA offline.'],
+  ['1.01', 'Números de series y repeticiones más grandes y sin cortes al cargar dos dígitos.'],
+  ['1.00', 'Primera versión: rutinas, biblioteca de +150 ejercicios, entrenamiento rápido, historial, estadísticas, progresión inteligente y PWA offline.'],
 ];
 
 function download(filename, content, type) {
