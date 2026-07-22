@@ -6,9 +6,10 @@ import { applyTheme } from '../app.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 
-const VERSION = '1.01';
+const VERSION = '1.02';
 
 const CHANGELOG = [
+  ['1.02', 'Durante el entrenamiento ya podés cambiar un ejercicio por otro, quitarlo o agregar uno extra, solo por ese día.'],
   ['1.01', 'Números de series y repeticiones más grandes y sin cortes al cargar dos dígitos.'],
   ['1.00', 'Primera versión: rutinas, biblioteca de +150 ejercicios, entrenamiento rápido, historial, estadísticas, progresión inteligente y PWA offline.'],
 ];

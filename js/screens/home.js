@@ -6,7 +6,7 @@ import { navigate } from '../router.js';
 import { groupMeta } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
 
-const VERSION = '1.01';
+const VERSION = '1.02';
 
 function routineIconBadge(r) {
   return h('div', { class: 'icon-badge', style: `background:${r.color || '#0a84ff'}` }, [icon(r.icon || 'dumbbell')]);

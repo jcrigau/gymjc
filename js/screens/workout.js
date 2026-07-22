@@ -9,6 +9,7 @@ import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { todayISO, fmtEntry, relative } from '../utils/format.js';
 import { suggest } from '../utils/progression.js';
+import { openExercisePicker } from './library.js';
 
 /** Stepper numérico grande y táctil. */
 function stepper({ value = 0, step = 1, min = 0, max = 999, decimals = 0 }) {
@@ -109,6 +110,10 @@ export default function WorkoutScreen(params) {
   // Sesión en memoria; se persiste en cuanto se registra el primer ejercicio.
   const session = { date: todayISO(), routineId: routine.id, routineName: routine.name, entries: [] };
 
+  // Lista de ejercicios de HOY (copia editable de la rutina). Cambiarla no
+  // modifica la rutina guardada: los reemplazos/agregados son solo por hoy.
+  let exerciseIds = [...routine.exercises];
+
   screen.appendChild(h('div', { class: 'header' }, [
     h('button', { class: 'icon-btn', onClick: () => navigate('home'), 'aria-label': 'Volver' }, [icon('back')]),
     h('div', { class: 'grow', style: 'text-align:center' }, [
@@ -131,12 +136,62 @@ export default function WorkoutScreen(params) {
     render();
   }
 
+  function dropEntry(id) {
+    const before = session.entries.length;
+    session.entries = session.entries.filter((e) => e.exerciseId !== id);
+    if (session.entries.length !== before && session.id) store.saveSession(session);
+  }
+
+  // Reemplaza un ejercicio por otro solo en el entrenamiento de hoy.
+  function swapExercise(oldId) {
+    openExercisePicker({
+      title: 'Cambiar ejercicio',
+      subtitle: 'Elegí con cuál reemplazarlo hoy',
+      exclude: new Set(exerciseIds),
+      closeOnPick: true,
+      onPick: (ex) => {
+        const i = exerciseIds.indexOf(oldId);
+        if (i >= 0) exerciseIds[i] = ex.id;
+        dropEntry(oldId); // si ya estaba registrado, se descarta
+        render();
+        toast('Ejercicio cambiado');
+      },
+    });
+  }
+
+  function removeExercise(id) {
+    exerciseIds = exerciseIds.filter((x) => x !== id);
+    dropEntry(id);
+    render();
+    toast('Ejercicio quitado de hoy');
+  }
+
+  function addExercise() {
+    openExercisePicker({
+      title: 'Agregar ejercicio',
+      subtitle: 'Se suma solo al entrenamiento de hoy',
+      exclude: new Set(exerciseIds),
+      onPick: (ex) => { exerciseIds.push(ex.id); render(); },
+    });
+  }
+
+  function openRowActions(ex) {
+    openSheet({
+      title: ex.name,
+      body: (api) => h('div', { class: 'vstack' }, [
+        h('button', { class: 'btn secondary', onClick: () => { api.close(); openEntrySheet(ex, session, upsert); } }, [icon('edit'), 'Registrar / editar']),
+        h('button', { class: 'btn secondary', onClick: () => { api.close(); swapExercise(ex.id); } }, [icon('swap'), 'Cambiar por otro']),
+        h('button', { class: 'btn danger', onClick: () => { api.close(); removeExercise(ex.id); } }, [icon('delete'), 'Quitar de hoy']),
+      ]),
+    });
+  }
+
   function render() {
     clear(list);
     const done = new Set(session.entries.map((e) => e.exerciseId));
-    progress.textContent = `${done.size} de ${routine.exercises.length} completados`;
+    progress.textContent = `${done.size} de ${exerciseIds.length} completados`;
 
-    routine.exercises.forEach((id) => {
+    exerciseIds.forEach((id) => {
       const ex = exerciseById(id);
       if (!ex) return;
       const g = groupMeta(ex.group);
@@ -148,14 +203,15 @@ export default function WorkoutScreen(params) {
           h('div', { class: 'row-title', text: ex.name }),
           h('div', { class: 'row-sub', text: isDone ? fmtEntry(entry) : `${g.id} · ${ex.type}` }),
         ]),
-        icon('chevron'),
+        h('button', { class: 'icon-btn', 'aria-label': 'Opciones', onClick: (e) => { e.stopPropagation(); openRowActions(ex); } }, [icon('more')]),
       ]));
     });
 
     screen.querySelector('.finish-wrap')?.remove();
-    const finish = h('div', { class: 'finish-wrap', style: 'margin-top:20px' }, [
+    const finish = h('div', { class: 'finish-wrap', style: 'margin-top:14px' }, [
+      h('button', { class: 'btn secondary', onClick: addExercise }, [icon('add'), 'Agregar ejercicio']),
       h('button', {
-        class: 'btn', disabled: session.entries.length === 0 ? '' : null,
+        class: 'btn', style: 'margin-top:10px', disabled: session.entries.length === 0 ? '' : null,
         onClick: () => {
           if (!session.entries.length) return;
           store.saveSession(session);

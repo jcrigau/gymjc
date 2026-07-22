@@ -149,12 +149,15 @@ export default function LibraryScreen() {
  * Selector de ejercicios reutilizable (para armar rutinas).
  * onPick(exercise) se llama por cada selección; el sheet queda abierto para
  * agregar varios. `exclude` es un Set de ids ya incluidos.
+ * `closeOnPick` cierra el sheet tras la primera selección (para "cambiar").
+ * `title`/`subtitle` permiten personalizar el encabezado.
  */
-export function openExercisePicker({ exclude = new Set(), onPick } = {}) {
+export function openExercisePicker({ exclude = new Set(), onPick, closeOnPick = false, title = 'Agregar ejercicios', subtitle = 'Tocá para sumarlos a la rutina' } = {}) {
   const state = { query: '', group: '' };
-  openSheet({
-    title: 'Agregar ejercicios',
-    subtitle: 'Tocá para sumarlos a la rutina',
+  let api;
+  api = openSheet({
+    title,
+    subtitle,
     body: () => {
       const wrap = h('div', {});
       const search = h('div', { class: 'search' }, [
@@ -176,7 +179,8 @@ export function openExercisePicker({ exclude = new Set(), onPick } = {}) {
           list.appendChild(exerciseRow(ex, {
             onClick: () => {
               if (exclude.has(ex.id)) return;
-              exclude.add(ex.id); onPick && onPick(ex); hapticTap(); refresh();
+              exclude.add(ex.id); onPick && onPick(ex); hapticTap();
+              if (closeOnPick) api.close(); else refresh();
             },
             trailing: h('span', { class: added ? 'pill green' : 'pill' }, [icon(added ? 'check' : 'add')]),
           }));
