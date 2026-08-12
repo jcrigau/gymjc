@@ -1,12 +1,12 @@
 // Pantalla de inicio: versión, rutinas, último entrenamiento y CTA principal.
 import { store } from '../store.js';
+import { VERSION } from '../app.js';
 import { h, icon, hapticTap } from '../utils/dom.js';
 import { relative, fmtShort } from '../utils/format.js';
 import { navigate } from '../router.js';
 import { groupMeta } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
 
-const VERSION = '1.02';
 
 function routineIconBadge(r) {
   return h('div', { class: 'icon-badge', style: `background:${r.color || '#0a84ff'}` }, [icon(r.icon || 'dumbbell')]);
