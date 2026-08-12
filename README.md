@@ -11,8 +11,30 @@ App para registrar entrenamientos en segundos. **Gratis, offline e instalable** 
 - **Progresión inteligente**: te sugiere subir o mantener el peso según el RPE del último entrenamiento.
 - **Historial**: calendario, lista cronológica, búsqueda y edición de registros.
 - **Progreso**: gráficos de peso y volumen, mejor marca, RPE promedio y más.
-- **Configuración**: tema claro/oscuro/sistema, backup JSON, exportación CSV y reinicio.
+- **Configuración**: tema claro/oscuro/sistema, exportación del historial (compartir o descargar), importación de backup y reinicio.
 - **PWA**: manifest, service worker, íconos, splash e instalación. Funciona 100% offline.
+
+## Exportar el historial para analizarlo
+
+Desde **Configuración → Exportar historial**. Se genera una fila por ejercicio registrado, ordenadas de la más antigua a la más reciente:
+
+| Columna | Detalle |
+|---|---|
+| `fecha`, `anio`, `mes`, `semana_iso`, `dia_semana` | Agrupar por período sin escribir fórmulas |
+| `sesion_id`, `rutina` | Identifican el entrenamiento |
+| `ejercicio`, `ejercicio_id`, `grupo`, `tipo` | Qué se hizo |
+| `peso_kg`, `series`, `reps`, `rpe` | Lo cargado en la app |
+| `volumen_kg`, `reps_totales`, `e1rm_kg` | Derivados: volumen = peso × series × reps; 1RM estimado por Epley |
+| `notas` | Texto libre, con saltos de línea normalizados |
+
+Cuatro opciones:
+
+- **Compartir los dos CSV** — abre la hoja nativa del sistema (WhatsApp, Mail, Drive…). Es el camino recomendado desde el celular: Safari en modo PWA no siempre respeta las descargas comunes.
+- **CSV para Excel** — BOM UTF-8, separador `;` y coma decimal. Abre con doble clic en Excel en español, con tildes y ñ correctas.
+- **CSV estándar** — separador `,`, punto decimal, sin BOM. Listo para Google Sheets, pandas o R.
+- **Backup JSON** — todo (rutinas, historial y ajustes) para restaurar en otro dispositivo con *Importar backup*.
+
+Los nombres de archivo llevan la fecha, así que exportaciones sucesivas no se pisan.
 
 ## Cómo instalarla en el celular
 
@@ -50,7 +72,7 @@ js/
   router.js           # router por hash
   store.js            # datos en localStorage
   data/exercises.js   # biblioteca de +150 ejercicios
-  utils/              # dom, formato, progresión
+  utils/              # dom, formato, progresión, exportación
   components/         # nav, sheet, toast, chart
   screens/            # home, routines, library, workout, history, stats, settings
 icons/                # íconos e imagen de la PWA
