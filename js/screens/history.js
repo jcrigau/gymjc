@@ -3,6 +3,7 @@
 import { store } from '../store.js';
 import { h, icon, clear } from '../utils/dom.js';
 import { fmtLong, fmtShort, relative, fmtEntry, fmtWeight } from '../utils/format.js';
+import { exerciseById } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 
@@ -28,11 +29,19 @@ function editEntrySheet(session, entry, onChange) {
         wrap.appendChild(h('div', { class: 'field' }, [h('label', { text: label }), inp]));
         return inp;
       };
-      const w = mk('Peso (kg)', 'weight');
+      // Por tiempo si el ejercicio está marcado así o si el registro ya tiene segundos.
+      const timed = !!(exerciseById(entry.exerciseId)?.timed) || entry.seconds != null;
+      const w = timed ? null : mk('Peso (kg)', 'weight');
       const grid = h('div', { class: 'grid-2' });
       const s = h('input', { class: 'input', inputmode: 'numeric', value: entry.sets ?? '' });
-      const r = h('input', { class: 'input', inputmode: 'numeric', value: entry.reps ?? '' });
-      grid.append(h('div', { class: 'field' }, [h('label', { text: 'Series' }), s]), h('div', { class: 'field' }, [h('label', { text: 'Reps' }), r]));
+      const r = h('input', {
+        class: 'input', inputmode: 'numeric',
+        value: (timed ? entry.seconds : entry.reps) ?? '',
+      });
+      grid.append(
+        h('div', { class: 'field' }, [h('label', { text: 'Series' }), s]),
+        h('div', { class: 'field' }, [h('label', { text: timed ? 'Segundos' : 'Reps' }), r]),
+      );
       wrap.appendChild(grid);
       const rpe = mk('RPE (1-10)', 'rpe');
       const notes = h('textarea', { class: 'textarea', text: entry.notes || '' });
@@ -41,9 +50,10 @@ function editEntrySheet(session, entry, onChange) {
       wrap.append(
         h('button', {
           class: 'btn', onClick: () => {
-            entry.weight = w.value === '' ? null : parseFloat(w.value.replace(',', '.'));
+            if (!timed) entry.weight = w.value === '' ? null : parseFloat(w.value.replace(',', '.'));
             entry.sets = s.value === '' ? null : parseInt(s.value);
-            entry.reps = r.value === '' ? null : parseInt(r.value);
+            if (timed) entry.seconds = r.value === '' ? null : parseInt(r.value);
+            else entry.reps = r.value === '' ? null : parseInt(r.value);
             entry.rpe = rpe.value === '' ? null : parseInt(rpe.value);
             entry.notes = notes.value.trim();
             store.saveSession(session);

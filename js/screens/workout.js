@@ -7,7 +7,7 @@ import { exerciseById, groupMeta } from '../data/exercises.js';
 import { navigate } from '../router.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
-import { todayISO, fmtEntry, relative } from '../utils/format.js';
+import { todayISO, fmtEntry, relative, fmtDuration } from '../utils/format.js';
 import { suggest } from '../utils/progression.js';
 import { openExercisePicker } from './library.js';
 
@@ -60,18 +60,46 @@ function openEntrySheet(exercise, session, onSaved) {
         ]));
       }
 
-      const wStep = stepper({ value: seed.weight ?? '', step: 2.5, min: 0, max: 999, decimals: 1 });
+      const timed = !!exercise.timed;
       const sStep = stepper({ value: seed.sets ?? 3, step: 1, min: 1, max: 20 });
-      const rStep = stepper({ value: seed.reps ?? 10, step: 1, min: 1, max: 100 });
       const rpeStep = stepper({ value: seed.rpe ?? '', step: 1, min: 1, max: 10 });
       const notes = h('textarea', { class: 'textarea', placeholder: 'Notas (opcional)', text: seed.notes || '' });
 
+      // Por tiempo: segundos por serie. Por carga: peso y repeticiones.
+      const secStep = timed ? stepper({ value: seed.seconds ?? 30, step: 5, min: 5, max: 3600 }) : null;
+      const wStep = timed ? null : stepper({ value: seed.weight ?? '', step: 2.5, min: 0, max: 999, decimals: 1 });
+      const rStep = timed ? null : stepper({ value: seed.reps ?? 10, step: 1, min: 1, max: 100 });
+
+      if (timed) {
+        const total = h('div', { class: 'small muted', style: 'margin:-6px 0 12px' });
+        const refreshTotal = () => {
+          const t = (secStep.get() || 0) * (sStep.get() || 0);
+          total.textContent = t ? `Tiempo total: ${fmtDuration(t)}` : '';
+        };
+        secStep.input.addEventListener('input', refreshTotal);
+        sStep.input.addEventListener('input', refreshTotal);
+        secStep.el.addEventListener('click', refreshTotal);
+        sStep.el.addEventListener('click', refreshTotal);
+        refreshTotal();
+
+        wrap.append(
+          h('div', { class: 'grid-2' }, [
+            h('div', { class: 'field' }, [h('label', { text: 'Series' }), sStep.el]),
+            h('div', { class: 'field' }, [h('label', { text: 'Tiempo por serie (seg)' }), secStep.el]),
+          ]),
+          total,
+        );
+      } else {
+        wrap.append(
+          h('div', { class: 'field' }, [h('label', { text: 'Peso (kg)' }), wStep.el]),
+          h('div', { class: 'grid-2' }, [
+            h('div', { class: 'field' }, [h('label', { text: 'Series' }), sStep.el]),
+            h('div', { class: 'field' }, [h('label', { text: 'Repeticiones' }), rStep.el]),
+          ]),
+        );
+      }
+
       wrap.append(
-        h('div', { class: 'field' }, [h('label', { text: 'Peso (kg)' }), wStep.el]),
-        h('div', { class: 'grid-2' }, [
-          h('div', { class: 'field' }, [h('label', { text: 'Series' }), sStep.el]),
-          h('div', { class: 'field' }, [h('label', { text: 'Repeticiones' }), rStep.el]),
-        ]),
         h('div', { class: 'field' }, [h('label', { text: 'RPE (1-10)' }), rpeStep.el]),
         h('div', { class: 'field' }, [h('label', { text: 'Notas' }), notes]),
         h('button', {
@@ -80,9 +108,10 @@ function openEntrySheet(exercise, session, onSaved) {
               exerciseId: exercise.id,
               name: exercise.name,
               group: exercise.group,
-              weight: wStep.get(),
+              weight: timed ? null : wStep.get(),
               sets: sStep.get(),
-              reps: rStep.get(),
+              reps: timed ? null : rStep.get(),
+              seconds: timed ? secStep.get() : null,
               rpe: rpeStep.get(),
               notes: notes.value.trim(),
             };

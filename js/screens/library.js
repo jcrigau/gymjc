@@ -73,15 +73,30 @@ function openAddCustom(onChange) {
       const group = h('select', { class: 'input' }, GROUPS.map((g) => h('option', { value: g.id, text: g.id })));
       const type = h('select', { class: 'input' }, TYPES.map((t) => h('option', { value: t, text: t })));
       const desc = h('textarea', { class: 'textarea', placeholder: 'Descripción (opcional)' });
+
+      // Ejercicios isométricos o de cardio: se registran por segundos, no por reps.
+      const timed = h('input', { type: 'checkbox', style: 'width:22px;height:22px;flex-shrink:0' });
+      const timedField = h('label', {
+        class: 'card',
+        style: 'display:flex;align-items:center;gap:12px;cursor:pointer',
+      }, [
+        timed,
+        h('div', {}, [
+          h('div', { style: 'font-weight:600', text: 'Se mide por tiempo' }),
+          h('div', { class: 'small muted', text: 'Vas a cargar segundos por serie en vez de peso y repeticiones.' }),
+        ]),
+      ]);
+
       return h('div', {}, [
         h('div', { class: 'field' }, [h('label', { text: 'Nombre' }), name]),
         h('div', { class: 'field' }, [h('label', { text: 'Grupo muscular' }), group]),
         h('div', { class: 'field' }, [h('label', { text: 'Tipo' }), type]),
+        timedField,
         h('div', { class: 'field' }, [h('label', { text: 'Descripción' }), desc]),
         h('button', {
           class: 'btn', onClick: () => {
             if (!name.value.trim()) { toast('Escribí un nombre'); return; }
-            store.addCustomExercise({ name: name.value.trim(), group: group.value, type: type.value, description: desc.value.trim() });
+            store.addCustomExercise({ name: name.value.trim(), group: group.value, type: type.value, description: desc.value.trim(), timed: timed.checked });
             api.close(); onChange && onChange(); toast('Ejercicio agregado', 'success');
           },
         }, [icon('check'), 'Guardar ejercicio']),

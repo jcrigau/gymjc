@@ -1,7 +1,7 @@
 // Estadísticas: resumen general y evolución por ejercicio (peso y volumen).
 import { store } from '../store.js';
 import { h, icon, clear } from '../utils/dom.js';
-import { fmtWeight, fmtShort, relative } from '../utils/format.js';
+import { fmtWeight, fmtShort, relative, fmtDuration } from '../utils/format.js';
 import { exerciseById } from '../data/exercises.js';
 import { lineChart, barChart } from '../components/chart.js';
 
@@ -35,18 +35,22 @@ export default function StatsScreen() {
   const totalVol = allEntries.reduce((a, e) => a + (Number(e.weight) || 0) * (Number(e.sets) || 0) * (Number(e.reps) || 0), 0);
   const last = history[0];
 
+  // Tiempo acumulado en ejercicios que se miden por segundos.
+  const totalSec = allEntries.reduce((a, e) => a + (Number(e.seconds) || 0) * (Number(e.sets) || 0), 0);
+
   screen.appendChild(h('div', { class: 'grid-2' }, [
     statCard('Entrenamientos', String(totalWorkouts), '#0a84ff'),
     statCard('RPE promedio', String(avgRpe), '#ff9f0a'),
     statCard('Último', last ? relative(last.date) : '—', '#30d158'),
     statCard('Volumen total', `${fmtWeight(Math.round(totalVol))} kg`, '#bf5af2'),
+    ...(totalSec ? [statCard('Tiempo total', fmtDuration(Math.round(totalSec)), '#64d2ff')] : []),
   ]));
 
   // ---- Evolución por ejercicio ----
   const withData = [...new Set(allEntries.map((e) => e.exerciseId))]
     .map((id) => exerciseById(id))
     .filter(Boolean)
-    .filter((ex) => store.entriesFor(ex.id).some((e) => Number(e.weight) > 0));
+    .filter((ex) => store.entriesFor(ex.id).some((e) => Number(e.weight) > 0 || Number(e.seconds) > 0));
 
   if (!withData.length) return screen;
 
@@ -62,8 +66,34 @@ export default function StatsScreen() {
 
   function renderExercise(id) {
     clear(detail);
-    const entries = store.entriesFor(id).filter((e) => Number(e.weight) > 0);
+    const timed = !!exerciseById(id)?.timed;
+    const entries = store.entriesFor(id)
+      .filter((e) => (timed ? Number(e.seconds) > 0 : Number(e.weight) > 0));
     if (!entries.length) return;
+
+    if (timed) {
+      const best = Math.max(...entries.map((e) => Number(e.seconds)));
+      const lastE = entries[entries.length - 1];
+
+      detail.appendChild(h('div', { class: 'grid-2', style: 'margin-bottom:12px' }, [
+        statCard('Mejor marca', fmtDuration(best), '#ffd60a'),
+        statCard('Último tiempo', fmtDuration(lastE.seconds)),
+      ]));
+
+      detail.appendChild(h('div', { class: 'card' }, [
+        h('div', { class: 'small muted', style: 'margin-bottom:6px', text: 'Tiempo por serie' }),
+        lineChart(entries.map((e) => ({ label: fmtShort(e.date), value: Number(e.seconds) })), { fmt: (v) => fmtDuration(Math.round(v)) }),
+      ]));
+
+      detail.appendChild(h('div', { class: 'card mt' }, [
+        h('div', { class: 'small muted', style: 'margin-bottom:6px', text: 'Tiempo total por sesión' }),
+        barChart(entries.map((e) => ({
+          label: fmtShort(e.date),
+          value: (Number(e.seconds) || 0) * (Number(e.sets) || 0),
+        })), { color: '#64d2ff' }),
+      ]));
+      return;
+    }
 
     const best = Math.max(...entries.map((e) => Number(e.weight)));
     const lastE = entries[entries.length - 1];
