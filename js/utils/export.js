@@ -20,6 +20,7 @@ export const COLUMNS = [
   'sesion_id', 'rutina',
   'ejercicio', 'ejercicio_id', 'grupo', 'tipo',
   'peso_kg', 'series', 'reps', 'rpe',
+  'duracion_seg', 'tiempo_total_seg',
   'volumen_kg', 'reps_totales', 'e1rm_kg',
   'notas',
 ];
@@ -62,6 +63,7 @@ export function buildRows() {
       const sets = num(e.sets);
       const reps = num(e.reps);
       const totalReps = sets && reps ? sets * reps : null;
+      const seconds = num(e.seconds);
       rows.push({
         fecha: s.date,
         anio: s.date.slice(0, 4),
@@ -78,6 +80,8 @@ export function buildRows() {
         series: sets,
         reps: reps,
         rpe: num(e.rpe),
+        duracion_seg: seconds,
+        tiempo_total_seg: seconds && sets ? seconds * sets : seconds,
         volumen_kg: weight && totalReps ? Math.round(weight * totalReps * 10) / 10 : null,
         reps_totales: totalReps,
         e1rm_kg: epley(weight, reps),

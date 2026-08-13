@@ -5,11 +5,30 @@
 // tipo de ejercicio: los de tren superior suben de a 2,5 kg; los grandes
 // (piernas) de a 5 kg; peso corporal sugiere sumar repeticiones.
 
-import { fmtWeight } from './format.js';
+import { fmtWeight, fmtDuration } from './format.js';
 
 const BIG = ['Piernas', 'Glúteos', 'Espalda'];
 
 export function suggest(last, exercise) {
+  // Ejercicios por tiempo: se progresa sumando segundos, no kilos.
+  if (exercise?.timed) {
+    if (!last || last.seconds == null || last.seconds === '') return null;
+    const sec = Number(last.seconds);
+    const rpeT = Number(last.rpe) || 0;
+    if (rpeT && rpeT <= 7) {
+      return {
+        seconds: sec + 5, sets: last.sets,
+        text: `La última vez RPE ${rpeT}. Probá ${fmtDuration(sec + 5)} por serie.`,
+      };
+    }
+    return {
+      seconds: sec, sets: last.sets,
+      text: rpeT
+        ? `RPE ${rpeT}. Sostené ${fmtDuration(sec)} y consolidá la técnica.`
+        : 'Repetí y anotá tu RPE para recibir sugerencias.',
+    };
+  }
+
   if (!last || last.weight == null || last.weight === '') return null;
 
   const weight = Number(last.weight);

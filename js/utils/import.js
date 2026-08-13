@@ -84,7 +84,7 @@ export function planImport(json) {
       if (ref.group && group !== ref.group) warnings.push(`Grupo desconocido "${ref.group}" en ${ref.name}: se usó ${group}.`);
       if (ref.type && type !== ref.type) warnings.push(`Tipo desconocido "${ref.type}" en ${ref.name}: se usó ${type}.`);
 
-      const pending = { name: ref.name, group, type, description: ref.description || '' };
+      const pending = { name: ref.name, group, type, description: ref.description || '', timed: !!ref.timed };
       seenNew.set(key, pending);
       toCreate.push(pending);
       items.push({ status: 'nuevo', pending });
@@ -108,7 +108,7 @@ export function planImport(json) {
 export function applyImport({ plan, toCreate }) {
   for (const ex of toCreate) {
     const created = store.addCustomExercise({
-      name: ex.name, group: ex.group, type: ex.type, description: ex.description,
+      name: ex.name, group: ex.group, type: ex.type, description: ex.description, timed: ex.timed,
     });
     ex.id = created.id;
   }

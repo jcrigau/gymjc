@@ -39,9 +39,27 @@ export function fmtWeight(n) {
   return String(Number(n)).replace('.', ',');
 }
 
-/** Resumen tipo "50 kg · 4×8 · RPE 8". */
+/** Segundos a texto legible: 30 -> "30 s", 90 -> "1:30 min". */
+export function fmtDuration(sec) {
+  const n = Number(sec);
+  if (sec == null || sec === '' || Number.isNaN(n)) return '—';
+  if (n < 60) return `${n} s`;
+  const m = Math.floor(n / 60);
+  const r = n % 60;
+  return r ? `${m}:${String(r).padStart(2, '0')} min` : `${m} min`;
+}
+
+/** Resumen tipo "50 kg · 4×8 · RPE 8", o "3 × 30 s · RPE 6" si es por tiempo. */
 export function fmtEntry(e) {
   const parts = [];
+
+  if (e.seconds != null && e.seconds !== '') {
+    parts.push(e.sets ? `${e.sets} × ${fmtDuration(e.seconds)}` : fmtDuration(e.seconds));
+    if (e.weight) parts.push(`${fmtWeight(e.weight)} kg`);
+    if (e.rpe) parts.push(`RPE ${e.rpe}`);
+    return parts.join(' · ');
+  }
+
   if (e.weight != null && e.weight !== '') parts.push(`${fmtWeight(e.weight)} kg`);
   if (e.sets && e.reps) parts.push(`${e.sets}×${e.reps}`);
   if (e.rpe) parts.push(`RPE ${e.rpe}`);
