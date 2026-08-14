@@ -111,10 +111,15 @@ export const store = {
     persist();
   },
 
-  /** Última entrada registrada para un ejercicio (para "última vez" y progresión). */
-  lastEntry(exerciseId) {
+  /**
+   * Última entrada registrada para un ejercicio (para "última vez" y
+   * progresión). `excludeSessionId` deja afuera la sesión en curso: si hoy ya
+   * cargaste el ejercicio, la referencia sigue siendo la vez ANTERIOR.
+   */
+  lastEntry(exerciseId, excludeSessionId) {
     let best = null;
     for (const s of db.history) {
+      if (excludeSessionId && s.id === excludeSessionId) continue;
       const e = (s.entries || []).find((x) => x.exerciseId === exerciseId);
       if (e && (!best || s.date > best.date)) best = { ...e, date: s.date };
     }
