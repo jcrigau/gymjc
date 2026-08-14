@@ -10,6 +10,7 @@ import { buildRows, toCSV, stamp, exportFiles, backupFile, downloadFile, shareOr
 import { planImport, applyImport } from '../utils/import.js';
 
 const CHANGELOG = [
+  ['1.06', 'Si cerrás la app a mitad del entrenamiento, al volver lo retomás donde estabas (adiós registros duplicados) y el inicio ofrece "Continuar". Además, cada ejercicio de la lista muestra qué hiciste la vez anterior sin tener que abrirlo.'],
   ['1.05', 'Los ejercicios que se miden por tiempo (plancha, hollow hold, mountain climbers, bicicleta y todo cardio) ahora se cargan en segundos por serie en vez de peso y repeticiones. Al crear un ejercicio propio podés marcarlo como "se mide por tiempo".'],
   ['1.04', 'Nueva opción "Importar rutinas": sumás rutinas desde un archivo sin pisar las que ya tenés ni tocar el historial. Los ejercicios que no existan se crean solos.'],
   ['1.03', 'Exportación del historial rehecha: se comparte al toque desde el celular (WhatsApp, Mail, Drive) y el CSV ahora incluye volumen, 1RM estimado y semana para analizar el progreso en la compu.'],

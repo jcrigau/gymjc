@@ -2,7 +2,7 @@
 import { store } from '../store.js';
 import { VERSION } from '../app.js';
 import { h, icon, hapticTap } from '../utils/dom.js';
-import { relative, fmtShort } from '../utils/format.js';
+import { relative, fmtShort, todayISO } from '../utils/format.js';
 import { navigate } from '../router.js';
 import { groupMeta } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
@@ -50,10 +50,21 @@ export default function HomeScreen() {
     h('button', { class: 'icon-btn', onClick: () => navigate('settings'), 'aria-label': 'Ajustes' }, [icon('settings')]),
   ]));
 
-  // CTA principal
-  screen.appendChild(h('button', { class: 'btn', onClick: startWorkoutFlow }, [
-    icon('play'), 'Comenzar entrenamiento',
-  ]));
+  // CTA principal. Si hoy ya hay un entrenamiento empezado y su rutina sigue
+  // existiendo, el botón lleva directo a continuarlo.
+  const todaySession = store.history.find((s) => s.date === todayISO() && store.routine(s.routineId));
+  if (todaySession) {
+    screen.appendChild(h('button', {
+      class: 'btn', onClick: () => { hapticTap(); navigate('workout/' + todaySession.routineId); },
+    }, [icon('play'), `Continuar ${todaySession.routineName || 'entrenamiento'}`]));
+    screen.appendChild(h('button', {
+      class: 'btn ghost', style: 'margin-top:8px', onClick: startWorkoutFlow,
+    }, ['Empezar otra rutina']));
+  } else {
+    screen.appendChild(h('button', { class: 'btn', onClick: startWorkoutFlow }, [
+      icon('play'), 'Comenzar entrenamiento',
+    ]));
+  }
 
   // Último entrenamiento
   screen.appendChild(h('div', { class: 'section-title', text: 'Entrenamiento reciente' }));

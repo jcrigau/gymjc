@@ -32,7 +32,7 @@ function stepper({ value = 0, step = 1, min = 0, max = 999, decimals = 0 }) {
 
 function openEntrySheet(exercise, session, onSaved) {
   const existing = (session.entries || []).find((e) => e.exerciseId === exercise.id);
-  const last = store.lastEntry(exercise.id);
+  const last = store.lastEntry(exercise.id, session.id);
   const sug = suggest(last, exercise);
 
   // Prefill: lo ya cargado hoy > sugerencia > última vez.
@@ -136,12 +136,26 @@ export default function WorkoutScreen(params) {
     return screen;
   }
 
-  // Sesión en memoria; se persiste en cuanto se registra el primer ejercicio.
-  const session = { date: todayISO(), routineId: routine.id, routineName: routine.name, entries: [] };
+  // Si hoy ya arrancaste esta rutina, se retoma esa sesión: cerrar la app a
+  // mitad del entrenamiento ya no genera un registro duplicado del mismo día.
+  const resumed = store.history.find((s) => s.date === todayISO() && s.routineId === routine.id);
+  const session = resumed || { date: todayISO(), routineId: routine.id, routineName: routine.name, entries: [] };
+  if (!Array.isArray(session.entries)) session.entries = [];
 
   // Lista de ejercicios de HOY (copia editable de la rutina). Cambiarla no
-  // modifica la rutina guardada: los reemplazos/agregados son solo por hoy.
-  let exerciseIds = [...routine.exercises];
+  // modifica la rutina guardada. Se persiste dentro de la sesión para que los
+  // reemplazos/agregados sobrevivan si cerrás y volvés.
+  let exerciseIds = Array.isArray(session.exerciseIds) ? [...session.exerciseIds] : [...routine.exercises];
+  for (const e of session.entries) {
+    if (!exerciseIds.includes(e.exerciseId)) exerciseIds.push(e.exerciseId);
+  }
+  if (resumed) toast('Retomaste el entrenamiento de hoy');
+
+  // Persiste la sesión (solo si ya existe en el historial) tras cambiar la lista.
+  const persistList = () => {
+    session.exerciseIds = [...exerciseIds];
+    if (session.id) store.saveSession(session);
+  };
 
   screen.appendChild(h('div', { class: 'header' }, [
     h('button', { class: 'icon-btn', onClick: () => navigate('home'), 'aria-label': 'Volver' }, [icon('back')]),
@@ -161,6 +175,7 @@ export default function WorkoutScreen(params) {
   function upsert(entry) {
     const i = session.entries.findIndex((e) => e.exerciseId === entry.exerciseId);
     if (i >= 0) session.entries[i] = entry; else session.entries.push(entry);
+    session.exerciseIds = [...exerciseIds];
     store.saveSession(session); // persiste y asigna id
     render();
   }
@@ -182,6 +197,7 @@ export default function WorkoutScreen(params) {
         const i = exerciseIds.indexOf(oldId);
         if (i >= 0) exerciseIds[i] = ex.id;
         dropEntry(oldId); // si ya estaba registrado, se descarta
+        persistList();
         render();
         toast('Ejercicio cambiado');
       },
@@ -191,6 +207,7 @@ export default function WorkoutScreen(params) {
   function removeExercise(id) {
     exerciseIds = exerciseIds.filter((x) => x !== id);
     dropEntry(id);
+    persistList();
     render();
     toast('Ejercicio quitado de hoy');
   }
@@ -200,7 +217,7 @@ export default function WorkoutScreen(params) {
       title: 'Agregar ejercicio',
       subtitle: 'Se suma solo al entrenamiento de hoy',
       exclude: new Set(exerciseIds),
-      onPick: (ex) => { exerciseIds.push(ex.id); render(); },
+      onPick: (ex) => { exerciseIds.push(ex.id); persistList(); render(); },
     });
   }
 
@@ -226,11 +243,18 @@ export default function WorkoutScreen(params) {
       const g = groupMeta(ex.group);
       const isDone = done.has(id);
       const entry = session.entries.find((e) => e.exerciseId === id);
+      // Referencia rápida sin abrir la hoja: qué hiciste la vez anterior.
+      const prev = isDone ? null : store.lastEntry(id, session.id);
+      const sub = isDone
+        ? fmtEntry(entry)
+        : prev
+          ? `Ant: ${fmtEntry(prev)} · ${relative(prev.date)}`
+          : `${g.id} · ${ex.type}`;
       list.appendChild(h('div', { class: 'row', onClick: () => openEntrySheet(ex, session, upsert) }, [
         h('div', { class: 'check' + (isDone ? ' done' : '') }, [icon('check')]),
         h('div', { class: 'row-main' }, [
           h('div', { class: 'row-title', text: ex.name }),
-          h('div', { class: 'row-sub', text: isDone ? fmtEntry(entry) : `${g.id} · ${ex.type}` }),
+          h('div', { class: 'row-sub', text: sub }),
         ]),
         h('button', { class: 'icon-btn', 'aria-label': 'Opciones', onClick: (e) => { e.stopPropagation(); openRowActions(ex); } }, [icon('more')]),
       ]));
