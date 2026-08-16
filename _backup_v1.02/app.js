@@ -12,7 +12,7 @@ import HistoryScreen from './screens/history.js';
 import StatsScreen from './screens/stats.js';
 import SettingsScreen from './screens/settings.js';
 
-export const VERSION = '1.08';
+export const VERSION = '1.02';
 
 const SCREENS = {
   home: HomeScreen,
@@ -65,38 +65,9 @@ function init() {
   startRouter();
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => registerSW());
-  }
-}
-
-// Registra el service worker y aplica las versiones nuevas sin que el usuario
-// tenga que cerrar todas las pestañas: apenas una versión queda instalada se
-// le pide el relevo y, cuando toma el control, se recarga una sola vez.
-async function registerSW() {
-  const hadController = !!navigator.serviceWorker.controller;
-  try {
-    const reg = await navigator.serviceWorker.register('./sw.js');
-    const takeOver = (worker) => worker && worker.postMessage('SKIP_WAITING');
-
-    if (reg.waiting) takeOver(reg.waiting);
-
-    reg.addEventListener('updatefound', () => {
-      const fresh = reg.installing;
-      if (!fresh) return;
-      fresh.addEventListener('statechange', () => {
-        if (fresh.state === 'installed' && navigator.serviceWorker.controller) takeOver(fresh);
-      });
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
-
-    let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      // En la primera instalación no hay nada que recargar.
-      if (!hadController || reloading) return;
-      reloading = true;
-      location.reload();
-    });
-  } catch {
-    // Sin service worker la app sigue funcionando, solo pierde el modo offline.
   }
 }
 

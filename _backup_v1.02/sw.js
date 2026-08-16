@@ -1,5 +1,5 @@
 // Service Worker de GymJC — cachea todo para funcionar 100% offline.
-const CACHE = 'gymjc-v1.08';
+const CACHE = 'gymjc-v1.02';
 
 // Todos los recursos de la app (app shell). Al ser rutas relativas
 // funciona igual en GitHub Pages dentro de un subdirectorio.
@@ -12,12 +12,9 @@ const ASSETS = [
   './js/router.js',
   './js/store.js',
   './js/data/exercises.js',
-  './js/data/planProfe.js',
   './js/utils/dom.js',
   './js/utils/format.js',
   './js/utils/progression.js',
-  './js/utils/export.js',
-  './js/utils/import.js',
   './js/components/nav.js',
   './js/components/sheet.js',
   './js/components/toast.js',
@@ -36,22 +33,10 @@ const ASSETS = [
   './icons/apple-touch-icon.png'
 ];
 
-// skipWaiting() se llama al instante, no encadenado al addAll: si un asset
-// falla, la versión nueva igual toma el control en vez de quedar en "waiting"
-// y dejar al usuario clavado en la versión vieja.
 self.addEventListener('install', (e) => {
-  self.skipWaiting();
-  // `cache: 'reload'` evita que el navegador sirva su copia HTTP vieja al
-  // instalar: sin esto una versión nueva puede quedar cacheada con archivos
-  // de la anterior y el usuario ve una mezcla de las dos.
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(
-    ASSETS.map((url) => new Request(url, { cache: 'reload' }))
-  )));
-});
-
-// La página puede forzar el relevo apenas detecta una versión nueva.
-self.addEventListener('message', (e) => {
-  if (e.data === 'SKIP_WAITING') self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {

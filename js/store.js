@@ -11,7 +11,7 @@ const DEFAULT = {
   history: [], // sesiones: { id, date, routineId, routineName, entries: [...] }
   customExercises: [],
   favorites: [],
-  settings: { theme: 'dark' },
+  settings: { theme: 'dark', cargaOverrides: {} },
 };
 
 let db = load();
@@ -39,6 +39,11 @@ export const store = {
   // ------------------------------ Ajustes -------------------------------
   get settings() { return db.settings; },
   setTheme(theme) { db.settings.theme = theme; persist(); },
+  setCargaOverride(id, carga) {
+    if (!db.settings.cargaOverrides) db.settings.cargaOverrides = {};
+    db.settings.cargaOverrides[id] = carga;
+    persist();
+  },
 
   // ------------------------------ Rutinas -------------------------------
   get routines() { return db.routines; },

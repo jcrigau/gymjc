@@ -18,10 +18,10 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', '
 export const COLUMNS = [
   'fecha', 'anio', 'mes', 'semana_iso', 'dia_semana',
   'sesion_id', 'rutina',
-  'ejercicio', 'ejercicio_id', 'grupo', 'tipo',
+  'ejercicio', 'ejercicio_id', 'grupo', 'tipo', 'tipo_carga',
   'peso_kg', 'series', 'reps', 'rpe',
   'duracion_seg', 'tiempo_total_seg',
-  'volumen_kg', 'reps_totales', 'e1rm_kg',
+  'factor_vol', 'volumen_kg', 'reps_totales', 'e1rm_kg',
   'notas',
 ];
 
@@ -64,6 +64,9 @@ export function buildRows() {
       const reps = num(e.reps);
       const totalReps = sets && reps ? sets * reps : null;
       const seconds = num(e.seconds);
+      // Factor de convención guardado al registrar (1 = simple, 2 = doble/uni).
+      // Registros viejos sin factor quedan en 1: conservan su volumen original.
+      const factor = Number(e.cargaFactor) || 1;
       rows.push({
         fecha: s.date,
         anio: s.date.slice(0, 4),
@@ -76,13 +79,15 @@ export function buildRows() {
         ejercicio_id: e.exerciseId || '',
         grupo: e.group || meta.group || '',
         tipo: meta.type || '',
+        tipo_carga: e.carga || meta.carga || '',
         peso_kg: weight,
         series: sets,
         reps: reps,
         rpe: num(e.rpe),
         duracion_seg: seconds,
         tiempo_total_seg: seconds && sets ? seconds * sets : seconds,
-        volumen_kg: weight && totalReps ? Math.round(weight * totalReps * 10) / 10 : null,
+        factor_vol: factor,
+        volumen_kg: weight && totalReps ? Math.round(weight * totalReps * factor * 10) / 10 : null,
         reps_totales: totalReps,
         e1rm_kg: epley(weight, reps),
         notas: (e.notes || '').replace(/\s*\n\s*/g, ' ').trim(),

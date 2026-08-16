@@ -10,7 +10,10 @@
 //       "exercises": [
 //         "espalda-jalon-al-pecho",                                  // id de la biblioteca
 //         { "name": "Bird-dog", "group": "Abdominales",              // o un ejercicio a crear
-//           "type": "Peso corporal", "description": "8 reps por lado" }
+//           "type": "Peso corporal", "description": "8 reps por lado" },
+//         { "id": "pecho-press-inclinado-con-mancuernas",            // con objetivo del profe
+//           "target": { "sets": 3, "reps": "8-12", "repsSeed": 8, "weight": 15,
+//                       "rpe": 8, "rest": 120, "note": "opcional" } }
 //       ] }
 //   ]
 // }
@@ -18,6 +21,12 @@
 // Cada ejercicio se resuelve en este orden: por id exacto -> por nombre (sin
 // distinguir mayúsculas ni tildes) -> se crea como personalizado. Así el mismo
 // archivo sirve aunque no sepas los ids de memoria.
+//
+// `target` es un objetivo de referencia (fijo, no se recalcula): lo que
+// indicó el profe para ese ejercicio dentro de ESA rutina. Convive con la
+// sugerencia automática de la app, que sigue basándose en tus últimas
+// sesiones. Para ejercicios por tiempo (`timed`), usar `secondsSeed` en vez
+// de `repsSeed`.
 
 import { store } from '../store.js';
 import { allExercises, GROUPS, TYPES } from '../data/exercises.js';
@@ -64,7 +73,7 @@ export function planImport(json) {
 
       const found = (ref.id && byId.get(ref.id)) || (key && byName.get(key));
       if (found) {
-        items.push({ status: 'existente', exercise: found });
+        items.push({ status: 'existente', exercise: found, target: ref.target || null });
         continue;
       }
 
@@ -75,7 +84,7 @@ export function planImport(json) {
 
       // Se crea una sola vez aunque aparezca en las dos rutinas.
       if (seenNew.has(key)) {
-        items.push({ status: 'nuevo', pending: seenNew.get(key) });
+        items.push({ status: 'nuevo', pending: seenNew.get(key), target: ref.target || null });
         continue;
       }
 
@@ -87,7 +96,7 @@ export function planImport(json) {
       const pending = { name: ref.name, group, type, description: ref.description || '', timed: !!ref.timed };
       seenNew.set(key, pending);
       toCreate.push(pending);
-      items.push({ status: 'nuevo', pending });
+      items.push({ status: 'nuevo', pending, target: ref.target || null });
     }
 
     // Nombre libre: si ya existe una rutina así, se numera en vez de pisarla.
@@ -115,10 +124,15 @@ export function applyImport({ plan, toCreate }) {
 
   const added = [];
   for (const r of plan) {
-    const exercises = r.items
-      .map((it) => (it.status === 'existente' ? it.exercise.id : it.pending.id))
-      .filter(Boolean);
-    added.push(store.saveRoutine({ name: r.name, color: r.color, icon: r.icon, exercises }));
+    const exercises = [];
+    const targets = {};
+    for (const it of r.items) {
+      const id = it.status === 'existente' ? it.exercise.id : it.pending.id;
+      if (!id) continue;
+      exercises.push(id);
+      if (it.target) targets[id] = it.target;
+    }
+    added.push(store.saveRoutine({ name: r.name, color: r.color, icon: r.icon, exercises, targets }));
   }
 
   return { routines: added.length, exercises: toCreate.length };

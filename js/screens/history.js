@@ -2,7 +2,7 @@
 // y edición/eliminación de registros.
 import { store } from '../store.js';
 import { h, icon, clear } from '../utils/dom.js';
-import { fmtLong, fmtShort, relative, fmtEntry, fmtWeight } from '../utils/format.js';
+import { fmtLong, fmtShort, relative, fmtEntry, fmtWeight, entryVolume } from '../utils/format.js';
 import { exerciseById } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
@@ -182,7 +182,7 @@ export default function HistoryScreen(params) {
       return;
     }
     items.forEach((s) => {
-      const vol = (s.entries || []).reduce((a, e) => a + (Number(e.weight) || 0) * (Number(e.sets) || 0) * (Number(e.reps) || 0), 0);
+      const vol = (s.entries || []).reduce((a, e) => a + entryVolume(e), 0);
       list.appendChild(h('div', { class: 'row', onClick: () => sessionDetail(s, () => { refreshDates(); renderList(); }) }, [
         h('div', { class: 'icon-badge', style: 'background:#0a84ff' }, [icon('calendar')]),
         h('div', { class: 'row-main' }, [

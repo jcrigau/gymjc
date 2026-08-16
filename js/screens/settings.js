@@ -8,8 +8,11 @@ import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { buildRows, toCSV, stamp, exportFiles, backupFile, downloadFile, shareOrDownload } from '../utils/export.js';
 import { planImport, applyImport } from '../utils/import.js';
+import { PLAN_PROFE } from '../data/planProfe.js';
 
 const CHANGELOG = [
+  ['1.08', 'Nuevo botón "Plan del profe · 8 semanas": suma las tres rutinas (Lunes A, Miércoles B, Viernes C) con el peso, series y RPE que indicó, sin borrar nada de lo que ya tenías. Durante el entrenamiento, cada ejercicio muestra ese objetivo (🎯) junto con la sugerencia automática de la app basada en tu última sesión. Se agregaron 4 ejercicios que faltaban en la biblioteca (Press inclinado 45° con mancuernas, Bird-dog, Pallof press, Gato-camello).'],
+  ['1.07', 'Volumen corregido: la app ahora sabe si el peso es de una o dos mancuernas. Se anota siempre el peso de UNA sola y el volumen sale bien en todos los ejercicios. Cada ejercicio tiene una convención de carga editable, y al cargar un peso muy por encima de tu máximo te pregunta por las dudas.'],
   ['1.06', 'Si cerrás la app a mitad del entrenamiento, al volver lo retomás donde estabas (adiós registros duplicados) y el inicio ofrece "Continuar". Además, cada ejercicio de la lista muestra qué hiciste la vez anterior sin tener que abrirlo.'],
   ['1.05', 'Los ejercicios que se miden por tiempo (plancha, hollow hold, mountain climbers, bicicleta y todo cardio) ahora se cargan en segundos por serie en vez de peso y repeticiones. Al crear un ejercicio propio podés marcarlo como "se mide por tiempo".'],
   ['1.04', 'Nueva opción "Importar rutinas": sumás rutinas desde un archivo sin pisar las que ya tenés ni tocar el historial. Los ejercicios que no existan se crean solos.'],
@@ -112,56 +115,77 @@ function importJSON() {
   });
 }
 
-/** Importa rutinas sumándolas a las que ya existen, con confirmación previa. */
-function importRoutines() {
-  pickFile((text) => {
-    let planned;
-    try {
-      planned = planImport(text);
-    } catch (err) {
-      toast(err.message || 'Archivo inválido');
-      return;
-    }
+/** Muestra la vista previa de un plan y lo aplica si el usuario confirma. */
+function reviewAndImport(text, { title = 'Importar rutinas', subtitleExtra = '' } = {}) {
+  let planned;
+  try {
+    planned = planImport(text);
+  } catch (err) {
+    toast(err.message || 'Archivo inválido');
+    return;
+  }
 
-    const { plan, toCreate, warnings } = planned;
+  const { plan, toCreate, warnings } = planned;
 
-    openSheet({
-      title: 'Importar rutinas',
-      subtitle: `${plan.length} rutina${plan.length > 1 ? 's' : ''} · ${toCreate.length} ejercicio${toCreate.length === 1 ? '' : 's'} nuevo${toCreate.length === 1 ? '' : 's'}`,
-      body: (api) => h('div', {}, [
-        h('div', { class: 'card' }, [
-          h('div', { class: 'small muted', text: 'Se suman a tus rutinas actuales. No se toca el historial ni se borra nada.' }),
-        ]),
-
-        ...plan.map((r) => h('div', { class: 'card' }, [
-          h('div', { style: 'font-weight:700;margin-bottom:6px', text: r.name }),
-          ...r.items.map((it) => h('div', { class: 'small muted' }, [
-            it.status === 'nuevo'
-              ? `+ ${it.pending.name} · ${it.pending.group} · nuevo`
-              : `• ${it.exercise.name} · ${it.exercise.group}`,
-          ])),
-        ])),
-
-        warnings.length ? h('div', { class: 'card' }, [
-          h('div', { style: 'font-weight:700;margin-bottom:6px', text: 'Avisos' }),
-          ...warnings.map((w) => h('div', { class: 'small muted', text: w })),
-        ]) : null,
-
-        h('button', {
-          class: 'btn', style: 'margin-top:10px', onClick: () => {
-            try {
-              const res = applyImport(planned);
-              api.close();
-              toast(`${res.routines} rutina${res.routines > 1 ? 's' : ''} importada${res.routines > 1 ? 's' : ''}`, 'success');
-              navigate('routines');
-            } catch {
-              toast('No se pudo importar');
-            }
-          },
-        }, [icon('check'), 'Importar']),
-        h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => api.close() }, ['Cancelar']),
+  openSheet({
+    title,
+    subtitle: `${plan.length} rutina${plan.length > 1 ? 's' : ''} · ${toCreate.length} ejercicio${toCreate.length === 1 ? '' : 's'} nuevo${toCreate.length === 1 ? '' : 's'}${subtitleExtra}`,
+    body: (api) => h('div', {}, [
+      h('div', { class: 'card' }, [
+        h('div', { class: 'small muted', text: 'Se suman a tus rutinas actuales. No se toca el historial ni se borra nada.' }),
       ]),
-    });
+
+      ...plan.map((r) => h('div', { class: 'card' }, [
+        h('div', { style: 'font-weight:700;margin-bottom:6px', text: r.name }),
+        ...r.items.map((it) => {
+          const base = it.status === 'nuevo'
+            ? `+ ${it.pending.name} · ${it.pending.group} · nuevo`
+            : `• ${it.exercise.name} · ${it.exercise.group}`;
+          const t = it.target;
+          const tParts = t ? [
+            t.weight != null ? `${String(t.weight).replace('.', ',')} kg` : null,
+            t.sets && t.reps ? `${t.sets}×${t.reps}` : null,
+            t.rpe ? `RPE ${t.rpe}` : null,
+          ].filter(Boolean).join(' · ') : '';
+          return h('div', {}, [
+            h('div', { class: 'small muted', text: base }),
+            tParts ? h('div', { class: 'small', style: 'color:var(--accent);margin:1px 0 6px', text: `  🎯 ${tParts}` }) : null,
+          ]);
+        }),
+      ])),
+
+      warnings.length ? h('div', { class: 'card' }, [
+        h('div', { style: 'font-weight:700;margin-bottom:6px', text: 'Avisos' }),
+        ...warnings.map((w) => h('div', { class: 'small muted', text: w })),
+      ]) : null,
+
+      h('button', {
+        class: 'btn', style: 'margin-top:10px', onClick: () => {
+          try {
+            const res = applyImport(planned);
+            api.close();
+            toast(`${res.routines} rutina${res.routines > 1 ? 's' : ''} importada${res.routines > 1 ? 's' : ''}`, 'success');
+            navigate('routines');
+          } catch {
+            toast('No se pudo importar');
+          }
+        },
+      }, [icon('check'), 'Importar']),
+      h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => api.close() }, ['Cancelar']),
+    ]),
+  });
+}
+
+/** Importa rutinas desde un archivo elegido por el usuario. */
+function importRoutines() {
+  pickFile((text) => reviewAndImport(text));
+}
+
+/** Carga el plan de 8 semanas armado por el profe, sin necesitar archivo. */
+function importPlanProfe() {
+  reviewAndImport(JSON.stringify(PLAN_PROFE), {
+    title: 'Plan del profe · 8 semanas',
+    subtitleExtra: ' · con peso y series sugeridos',
   });
 }
 
@@ -203,6 +227,7 @@ export default function SettingsScreen() {
   // Datos
   screen.appendChild(h('div', { class: 'section-title', text: 'Datos' }));
   screen.appendChild(h('div', { class: 'list' }, [
+    row('target', 'Plan del profe · 8 semanas', 'Lunes A, Miércoles B y Viernes C con peso y series sugeridos', importPlanProfe, '#ffd60a'),
     row('share', 'Exportar historial', 'Compartir o descargar en CSV y JSON', openExportSheet, '#0a84ff'),
     row('add', 'Importar rutinas', 'Sumá rutinas desde un archivo, sin borrar nada', importRoutines, '#30d158'),
     row('upload', 'Importar backup (JSON)', 'Reemplaza TODOS tus datos por los del archivo', importJSON, '#8e8e93'),

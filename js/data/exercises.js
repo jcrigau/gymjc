@@ -38,6 +38,7 @@ const RAW = {
     ['Aperturas en polea alta', 'Polea', 'Cruce descendente para el pecho bajo.'],
     ['Flexiones con lastre', 'Peso corporal', 'Flexiones con disco en la espalda para más carga.'],
     ['Press con banda elástica', 'Peso corporal', 'Empuje con banda cuando no hay cargas.'],
+    ['Press inclinado 45° con mancuernas', 'Mancuernas', 'Banco a 45°, deltoide anterior sin pasar la línea de la cabeza.'],
   ],
   Espalda: [
     ['Dominadas', 'Peso corporal', 'Colgado, subí el mentón por encima de la barra.'],
@@ -179,6 +180,9 @@ const RAW = {
     ['Toques de talón', 'Peso corporal', 'Oblicuos tocando alternadamente los talones.'],
     ['Ab wheel de rodillas', 'Peso corporal', 'Progresión inicial de la rueda abdominal.'],
     ['Woodchopper en polea', 'Polea', 'Corte diagonal para oblicuos.'],
+    ['Bird-dog', 'Peso corporal', 'En cuatro apoyos, extendé brazo y pierna opuestos manteniendo la cadera fija.'],
+    ['Pallof press', 'Polea', 'De costado a la polea, empujá al frente resistiendo la rotación del torso.'],
+    ['Gato-camello + rotación torácica', 'Peso corporal', 'En cuatro apoyos, alterná flexión y extensión de columna con rotación torácica.'],
   ],
   Cardio: [
     ['Cinta (caminar)', 'Cardio', 'Caminata a ritmo constante.', true],
@@ -205,20 +209,58 @@ function slug(name, group) {
     .replace(/(^-|-$)/g, '');
 }
 
+// -------------------------- Convención de carga ---------------------------
+// Cómo cuenta el peso registrado para el cálculo de volumen:
+//   simple → una sola carga total (barra, máquina, polea, 1 mancuerna).
+//            volumen = peso × series × reps
+//   doble  → dos mancuernas a la vez (se anota el peso de UNA). ×2.
+//            volumen = peso × 2 × series × reps
+//   uni    → una mancuerna, series por lado (se anota el peso de UNA). ×2.
+//            volumen = peso × series × reps × 2 lados
+export const CARGA_FACTOR = { simple: 1, doble: 2, uni: 2 };
+export const cargaFactor = (c) => CARGA_FACTOR[c] || 1;
+export const CARGA_OPTIONS = [
+  { value: 'simple', label: 'Una carga (barra/máquina/1 mancuerna)' },
+  { value: 'doble', label: 'Dos mancuernas a la vez' },
+  { value: 'uni', label: 'Unilateral (una mancuerna por lado)' },
+];
+export const CARGA_LABEL = Object.fromEntries(CARGA_OPTIONS.map((o) => [o.value, o.label]));
+export const cargaHint = (c) =>
+  c === 'doble' || c === 'uni' ? 'Anotá el peso de UNA sola mancuerna, como figura en el rack.' : '';
+
+// Ejercicios de mancuerna que NO son "dos mancuernas a la vez".
+const CARGA_OVERRIDE = {
+  'espalda-remo-con-mancuerna': 'uni',
+  'biceps-curl-concentrado': 'uni',
+  'triceps-patada-de-triceps': 'uni',
+  'pecho-pullover-con-mancuerna': 'simple',
+  'triceps-extension-sobre-la-cabeza': 'simple',
+  'piernas-sentadilla-goblet': 'simple',
+  'gluteos-sentadilla-sumo': 'simple',
+  'gemelos-elevacion-de-gemelos-con-mancuerna': 'simple',
+};
+
+function defaultCarga(id, type) {
+  if (CARGA_OVERRIDE[id]) return CARGA_OVERRIDE[id];
+  return type === 'Mancuernas' ? 'doble' : 'simple';
+}
+
 export const BASE_EXERCISES = Object.entries(RAW).flatMap(([group, list]) =>
-  list.map(([name, type, description, timed]) => ({
-    id: slug(name, group),
-    name,
-    group,
-    type,
-    description,
-    timed: !!timed,
-  }))
+  list.map(([name, type, description, timed]) => {
+    const id = slug(name, group);
+    return { id, name, group, type, description, timed: !!timed, carga: defaultCarga(id, type) };
+  })
 );
 
 export const groupMeta = (id) => GROUPS.find((g) => g.id === id) || GROUPS[0];
 
-/** Biblioteca completa: base + personalizados del usuario. */
-export const allExercises = () => [...BASE_EXERCISES, ...store.customExercises];
+// Aplica la corrección de convención que el usuario haya fijado a mano.
+function withOverride(ex) {
+  const ov = store.settings.cargaOverrides;
+  return ov && ov[ex.id] ? { ...ex, carga: ov[ex.id] } : ex;
+}
+
+/** Biblioteca completa: base + personalizados del usuario, con overrides. */
+export const allExercises = () => [...BASE_EXERCISES, ...store.customExercises].map(withOverride);
 export const exerciseById = (id) => allExercises().find((e) => e.id === id);
 export const TYPES = ['Barra', 'Mancuernas', 'Máquina', 'Polea', 'Peso corporal', 'Cardio'];

@@ -2,7 +2,7 @@
 // ejercicios personalizados y un selector reutilizable para las rutinas.
 import { store } from '../store.js';
 import { h, icon, clear, hapticTap } from '../utils/dom.js';
-import { GROUPS, TYPES, groupMeta, allExercises } from '../data/exercises.js';
+import { GROUPS, TYPES, groupMeta, allExercises, CARGA_OPTIONS } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { fmtEntry } from '../utils/format.js';
@@ -50,6 +50,15 @@ function openExerciseDetail(ex, onChange) {
           h('div', { class: 'small muted', text: 'Última vez' }),
           h('div', { style: 'font-size:17px;font-weight:600;margin-top:2px', text: fmtEntry(last) }),
         ]) : null,
+        // Convención de carga: define cómo se calcula el volumen. Editable por
+        // si la clasificación automática no coincide con cómo lo hacés.
+        ex.timed ? null : h('div', { class: 'field mt' }, [
+          h('label', { text: 'Cómo cuenta el peso (para el volumen)' }),
+          h('select', {
+            class: 'input',
+            onChange: (e) => { store.setCargaOverride(ex.id, e.target.value); toast('Convención actualizada', 'success'); onChange && onChange(); },
+          }, CARGA_OPTIONS.map((o) => h('option', { value: o.value, text: o.label, selected: ex.carga === o.value ? '' : null }))),
+        ]),
         h('div', { class: 'grid-2 mt' }, [
           h('button', {
             class: 'btn secondary',
@@ -72,6 +81,7 @@ function openAddCustom(onChange) {
       const name = h('input', { class: 'input', placeholder: 'Nombre del ejercicio' });
       const group = h('select', { class: 'input' }, GROUPS.map((g) => h('option', { value: g.id, text: g.id })));
       const type = h('select', { class: 'input' }, TYPES.map((t) => h('option', { value: t, text: t })));
+      const carga = h('select', { class: 'input' }, CARGA_OPTIONS.map((o) => h('option', { value: o.value, text: o.label })));
       const desc = h('textarea', { class: 'textarea', placeholder: 'Descripción (opcional)' });
 
       // Ejercicios isométricos o de cardio: se registran por segundos, no por reps.
@@ -91,12 +101,13 @@ function openAddCustom(onChange) {
         h('div', { class: 'field' }, [h('label', { text: 'Nombre' }), name]),
         h('div', { class: 'field' }, [h('label', { text: 'Grupo muscular' }), group]),
         h('div', { class: 'field' }, [h('label', { text: 'Tipo' }), type]),
+        h('div', { class: 'field' }, [h('label', { text: 'Cómo cuenta el peso' }), carga]),
         timedField,
         h('div', { class: 'field' }, [h('label', { text: 'Descripción' }), desc]),
         h('button', {
           class: 'btn', onClick: () => {
             if (!name.value.trim()) { toast('Escribí un nombre'); return; }
-            store.addCustomExercise({ name: name.value.trim(), group: group.value, type: type.value, description: desc.value.trim(), timed: timed.checked });
+            store.addCustomExercise({ name: name.value.trim(), group: group.value, type: type.value, description: desc.value.trim(), timed: timed.checked, carga: carga.value });
             api.close(); onChange && onChange(); toast('Ejercicio agregado', 'success');
           },
         }, [icon('check'), 'Guardar ejercicio']),

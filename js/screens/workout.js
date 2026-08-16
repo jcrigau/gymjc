@@ -3,11 +3,11 @@
 // sugerencia de progresión automática.
 import { store } from '../store.js';
 import { h, icon, clear, hapticTap } from '../utils/dom.js';
-import { exerciseById, groupMeta } from '../data/exercises.js';
+import { exerciseById, groupMeta, cargaFactor, cargaHint } from '../data/exercises.js';
 import { navigate } from '../router.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
-import { todayISO, fmtEntry, relative, fmtDuration } from '../utils/format.js';
+import { todayISO, fmtEntry, relative, fmtDuration, fmtWeight } from '../utils/format.js';
 import { suggest } from '../utils/progression.js';
 import { openExercisePicker } from './library.js';
 
@@ -30,13 +30,22 @@ function stepper({ value = 0, step = 1, min = 0, max = 999, decimals = 0 }) {
   return { el, get: () => input.value.trim() === '' ? null : clampFmt(parseFloat(input.value.replace(',', '.')) || 0), input };
 }
 
-function openEntrySheet(exercise, session, onSaved) {
+function openEntrySheet(exercise, session, onSaved, target) {
   const existing = (session.entries || []).find((e) => e.exerciseId === exercise.id);
   const last = store.lastEntry(exercise.id, session.id);
   const sug = suggest(last, exercise);
 
-  // Prefill: lo ya cargado hoy > sugerencia > última vez.
-  const seed = existing || (sug ? { weight: sug.weight, sets: sug.sets, reps: sug.reps, rpe: '' } : last) || {};
+  // Prefill: lo ya cargado hoy > sugerencia de la app > última vez > objetivo
+  // del profe (solo si nunca se hizo este ejercicio, como punto de partida).
+  const fromTarget = target && !last
+    ? {
+        weight: target.weight ?? '',
+        sets: target.sets ?? '',
+        reps: target.repsSeed ?? '',
+        seconds: target.secondsSeed ?? '',
+      }
+    : null;
+  const seed = existing || (sug ? { weight: sug.weight, sets: sug.sets, reps: sug.reps, rpe: '' } : last) || fromTarget || {};
 
   openSheet({
     title: exercise.name,
@@ -50,6 +59,20 @@ function openEntrySheet(exercise, session, onSaved) {
             h('div', { class: 'small muted', text: `Última vez · ${relative(last.date)}` }),
           ]),
           h('div', { style: 'font-size:17px;font-weight:600;margin-top:2px', text: fmtEntry(last) }),
+        ]));
+      }
+
+      if (target) {
+        const parts = [
+          target.weight != null ? `${fmtWeight(target.weight)} kg` : null,
+          target.sets && target.reps ? `${target.sets} × ${target.reps}` : null,
+          target.rpe ? `RPE ${target.rpe}` : null,
+        ].filter(Boolean).join(' · ');
+        wrap.appendChild(h('div', { class: 'card', style: 'border-color:#ffd60a' }, [
+          h('div', { class: 'small', style: 'color:#ffd60a;font-weight:700', text: '🎯 Plan del profe' }),
+          parts ? h('div', { style: 'font-size:17px;font-weight:600;margin-top:2px', text: parts }) : null,
+          target.rest ? h('div', { class: 'small muted', style: 'margin-top:2px', text: `Descanso: ${target.rest} s` }) : null,
+          target.note ? h('div', { class: 'small muted', style: 'margin-top:4px', text: target.note }) : null,
         ]));
       }
 
@@ -90,8 +113,13 @@ function openEntrySheet(exercise, session, onSaved) {
           total,
         );
       } else {
+        const hint = cargaHint(exercise.carga);
         wrap.append(
-          h('div', { class: 'field' }, [h('label', { text: 'Peso (kg)' }), wStep.el]),
+          h('div', { class: 'field' }, [
+            h('label', { text: 'Peso (kg)' }),
+            wStep.el,
+            hint ? h('div', { class: 'small muted', style: 'margin:6px 4px 0' }, [`⚖️ ${hint}`]) : null,
+          ]),
           h('div', { class: 'grid-2' }, [
             h('div', { class: 'field' }, [h('label', { text: 'Series' }), sStep.el]),
             h('div', { class: 'field' }, [h('label', { text: 'Repeticiones' }), rStep.el]),
@@ -104,16 +132,30 @@ function openEntrySheet(exercise, session, onSaved) {
         h('div', { class: 'field' }, [h('label', { text: 'Notas' }), notes]),
         h('button', {
           class: 'btn', onClick: () => {
+            const weight = timed ? null : wStep.get();
+
+            // Aviso si el peso supera en más de 50% el máximo histórico:
+            // suele delatar un error de convención, sin bloquear un PR real.
+            if (!timed && weight) {
+              const prev = store.entriesFor(exercise.id).filter((e) => e.date !== session.date);
+              const histMax = Math.max(0, ...prev.map((e) => Number(e.weight) || 0));
+              if (histMax > 0 && weight > histMax * 1.5 &&
+                  !confirm(`¿Seguro? Tu máximo anterior en ${exercise.name} fue ${fmtWeight(histMax)} kg.`)) return;
+            }
+
+            const carga = exercise.carga || 'simple';
             const entry = {
               exerciseId: exercise.id,
               name: exercise.name,
               group: exercise.group,
-              weight: timed ? null : wStep.get(),
+              weight,
               sets: sStep.get(),
               reps: timed ? null : rStep.get(),
               seconds: timed ? secStep.get() : null,
               rpe: rpeStep.get(),
               notes: notes.value.trim(),
+              carga,                      // convención con la que se registró
+              cargaFactor: cargaFactor(carga), // factor para el volumen (1 o 2)
             };
             onSaved(entry);
             api.close();
@@ -225,7 +267,7 @@ export default function WorkoutScreen(params) {
     openSheet({
       title: ex.name,
       body: (api) => h('div', { class: 'vstack' }, [
-        h('button', { class: 'btn secondary', onClick: () => { api.close(); openEntrySheet(ex, session, upsert); } }, [icon('edit'), 'Registrar / editar']),
+        h('button', { class: 'btn secondary', onClick: () => { api.close(); openEntrySheet(ex, session, upsert, routine.targets?.[ex.id]); } }, [icon('edit'), 'Registrar / editar']),
         h('button', { class: 'btn secondary', onClick: () => { api.close(); swapExercise(ex.id); } }, [icon('swap'), 'Cambiar por otro']),
         h('button', { class: 'btn danger', onClick: () => { api.close(); removeExercise(ex.id); } }, [icon('delete'), 'Quitar de hoy']),
       ]),
@@ -243,14 +285,19 @@ export default function WorkoutScreen(params) {
       const g = groupMeta(ex.group);
       const isDone = done.has(id);
       const entry = session.entries.find((e) => e.exerciseId === id);
-      // Referencia rápida sin abrir la hoja: qué hiciste la vez anterior.
+      const target = routine.targets?.[id];
+      // Referencia rápida sin abrir la hoja: qué hiciste la vez anterior, o si
+      // nunca lo hiciste, el objetivo del profe para esta rutina.
       const prev = isDone ? null : store.lastEntry(id, session.id);
+      const targetSub = target && (target.weight != null || (target.sets && target.reps))
+        ? `🎯 ${[target.weight != null ? `${fmtWeight(target.weight)} kg` : null, target.sets && target.reps ? `${target.sets}×${target.reps}` : null].filter(Boolean).join(' · ')}`
+        : null;
       const sub = isDone
         ? fmtEntry(entry)
         : prev
           ? `Ant: ${fmtEntry(prev)} · ${relative(prev.date)}`
-          : `${g.id} · ${ex.type}`;
-      list.appendChild(h('div', { class: 'row', onClick: () => openEntrySheet(ex, session, upsert) }, [
+          : targetSub || `${g.id} · ${ex.type}`;
+      list.appendChild(h('div', { class: 'row', onClick: () => openEntrySheet(ex, session, upsert, target) }, [
         h('div', { class: 'check' + (isDone ? ' done' : '') }, [icon('check')]),
         h('div', { class: 'row-main' }, [
           h('div', { class: 'row-title', text: ex.name }),

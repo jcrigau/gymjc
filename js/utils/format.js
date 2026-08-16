@@ -66,6 +66,17 @@ export function fmtEntry(e) {
   return parts.join(' · ') || 'Sin datos';
 }
 
+/**
+ * Volumen (tonelaje) de un registro, respetando la convención de carga.
+ * Usa el factor guardado al momento de registrar (`cargaFactor`): así los
+ * registros nuevos salen corregidos y los viejos conservan su número original
+ * (factor 1), sin recalcularse hacia atrás.
+ */
+export function entryVolume(e) {
+  const f = Number(e.cargaFactor) || 1;
+  return (Number(e.weight) || 0) * (Number(e.sets) || 0) * (Number(e.reps) || 0) * f;
+}
+
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }

@@ -1,7 +1,7 @@
 // Estadísticas: resumen general y evolución por ejercicio (peso y volumen).
 import { store } from '../store.js';
 import { h, icon, clear } from '../utils/dom.js';
-import { fmtWeight, fmtShort, relative, fmtDuration } from '../utils/format.js';
+import { fmtWeight, fmtShort, relative, fmtDuration, entryVolume } from '../utils/format.js';
 import { exerciseById } from '../data/exercises.js';
 import { lineChart, barChart } from '../components/chart.js';
 
@@ -32,7 +32,7 @@ export default function StatsScreen() {
   const allEntries = history.flatMap((s) => s.entries || []);
   const rpes = allEntries.map((e) => Number(e.rpe)).filter((n) => n > 0);
   const avgRpe = rpes.length ? (rpes.reduce((a, b) => a + b, 0) / rpes.length).toFixed(1) : '—';
-  const totalVol = allEntries.reduce((a, e) => a + (Number(e.weight) || 0) * (Number(e.sets) || 0) * (Number(e.reps) || 0), 0);
+  const totalVol = allEntries.reduce((a, e) => a + entryVolume(e), 0);
   const last = history[0];
 
   // Tiempo acumulado en ejercicios que se miden por segundos.
@@ -112,7 +112,7 @@ export default function StatsScreen() {
       h('div', { class: 'small muted', style: 'margin-bottom:6px', text: 'Volumen por sesión (kg)' }),
       barChart(entries.map((e) => ({
         label: fmtShort(e.date),
-        value: (Number(e.weight) || 0) * (Number(e.sets) || 0) * (Number(e.reps) || 0),
+        value: entryVolume(e),
       })), { color: '#30d158' }),
     ]));
   }
