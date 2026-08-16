@@ -1,0 +1,56 @@
+{
+  "gymjc": "rutinas",
+  "version": 1,
+  "routines": [
+    {
+      "name": "Miércoles A",
+      "color": "#0a84ff",
+      "icon": "dumbbell",
+      "exercises": [
+        "espalda-jalon-al-pecho",
+        "piernas-prensa-de-piernas",
+        "pecho-press-inclinado-con-mancuernas",
+        {
+          "name": "Isquiotibiales en máquina",
+          "group": "Piernas",
+          "type": "Máquina",
+          "description": "Curl femoral. Objetivo de la semana: 22 kg, 3x12, RPE 8."
+        },
+        "espalda-remo-con-mancuerna",
+        "hombros-elevaciones-laterales",
+        "abdominales-plancha",
+        {
+          "name": "Bird-dog",
+          "group": "Abdominales",
+          "type": "Peso corporal",
+          "description": "En cuadrupedia, extendé brazo y pierna contrarios. 8 reps POR LADO. Objetivo: 2 series, RPE 6."
+        }
+      ]
+    },
+    {
+      "name": "Viernes B",
+      "color": "#ff375f",
+      "icon": "fitness",
+      "exercises": [
+        "gluteos-hip-thrust",
+        "espalda-jalon-al-pecho",
+        {
+          "name": "Peso muerto rumano con mancuernas",
+          "group": "Piernas",
+          "type": "Mancuernas",
+          "description": "NO pasar de RPE 7 aunque sobre fuerza. Bajá hasta media canilla, no al piso. Objetivo: 20 kg, 3x10."
+        },
+        "piernas-extension-de-cuadriceps",
+        "hombros-press-de-hombros-con-mancuernas",
+        "espalda-face-pull",
+        "gemelos-elevacion-de-gemelos-en-prensa",
+        {
+          "name": "Pallof press",
+          "group": "Abdominales",
+          "type": "Polea",
+          "description": "Antirrotación en polea. 10 reps POR LADO. Objetivo: 12 kg, 3 series, RPE 7."
+        }
+      ]
+    }
+  ]
+}
