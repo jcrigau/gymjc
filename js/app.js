@@ -12,7 +12,7 @@ import HistoryScreen from './screens/history.js';
 import StatsScreen from './screens/stats.js';
 import SettingsScreen from './screens/settings.js';
 
-export const VERSION = '1.08';
+export const VERSION = '1.09';
 
 const SCREENS = {
   home: HomeScreen,

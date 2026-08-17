@@ -6,6 +6,7 @@ import { GROUPS, TYPES, groupMeta, allExercises, CARGA_OPTIONS } from '../data/e
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { fmtEntry } from '../utils/format.js';
+import { openTechniqueSheet, hasTechnique } from '../components/techniqueSheet.js';
 
 function norm(s) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -46,6 +47,10 @@ function openExerciseDetail(ex, onChange) {
       const last = store.lastEntry(ex.id);
       return h('div', {}, [
         h('div', { class: 'card', text: ex.description || 'Sin descripción.' }),
+        hasTechnique(ex) ? h('button', {
+          class: 'btn secondary', style: 'margin-top:10px',
+          onClick: () => openTechniqueSheet(ex),
+        }, [icon('info'), 'Cómo se hace']) : null,
         last ? h('div', { class: 'card mt' }, [
           h('div', { class: 'small muted', text: 'Última vez' }),
           h('div', { style: 'font-size:17px;font-weight:600;margin-top:2px', text: fmtEntry(last) }),

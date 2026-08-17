@@ -10,6 +10,7 @@ import { toast } from '../components/toast.js';
 import { todayISO, fmtEntry, relative, fmtDuration, fmtWeight } from '../utils/format.js';
 import { suggest } from '../utils/progression.js';
 import { openExercisePicker } from './library.js';
+import { openTechniqueSheet, hasTechnique } from '../components/techniqueSheet.js';
 
 /** Stepper numérico grande y táctil. */
 function stepper({ value = 0, step = 1, min = 0, max = 999, decimals = 0 }) {
@@ -52,6 +53,17 @@ function openEntrySheet(exercise, session, onSaved, target) {
     subtitle: `${exercise.group} · ${exercise.type}`,
     body: (api) => {
       const wrap = h('div', {});
+
+      // Acceso a la técnica sin estorbar la carga rápida: chico y arriba.
+      if (hasTechnique(exercise)) {
+        wrap.appendChild(h('div', { style: 'display:flex;justify-content:flex-end;margin:-4px 0 10px' }, [
+          h('button', {
+            class: 'btn ghost small',
+            style: 'width:auto;padding:6px 10px',
+            onClick: () => openTechniqueSheet(exercise),
+          }, [icon('info'), 'Cómo se hace']),
+        ]));
+      }
 
       if (last) {
         wrap.appendChild(h('div', { class: 'card' }, [
