@@ -84,20 +84,27 @@ Estos eran ejercicios personalizados duplicados que ya tenías cargados:
 | Nombre que usaste | Apunta a | Nota |
 |---|---|---|
 | Subida al cajón | Step up | Tenías los dos cargados por separado |
-| Vuelos laterales | Elevaciones laterales | Estaba mal clasificado en grupo "Espalda" |
+| Vuelos laterales | **Pájaros (deltoide posterior)** | Confirmado por el usuario: los hacía inclinado |
 | Estocada | Zancadas | |
 | Isquiotibiales en máquina | Curl femoral sentado | |
 | Izquiotobiales en máquina | Curl femoral sentado | Error de tipeo del original |
 
-> 💡 Ojo con **"Vuelos laterales"**: se interpretó como elevaciones laterales
-> (deltoide medio). Si en realidad lo hacías inclinado hacia adelante, es
-> deltoide **posterior** y correspondería apuntarlo a `pajaros (deltoide posterior)`.
+> ⚠️ **Pájaros vs. Elevaciones laterales — son dos ejercicios distintos.**
+> Lo que el usuario anotaba como "Vuelos laterales" eran **pájaros**: inclinado
+> hacia adelante, hombro **posterior**. El plan del profe (desde 08/2026) incluye
+> **elevaciones laterales**: parado, hombro **medio**. Cada uno tiene su ficha y
+> conviven sin pisarse, porque el plan usa el nombre propio.
+>
+> Consecuencia: el ejercicio personalizado "Vuelos laterales" quedó guardado con
+> grupo **Espalda**, cuando debería ser **Hombros**. Eso no afecta la ficha de
+> técnica (que busca por nombre), pero sí desvía el volumen por grupo muscular en
+> la pantalla de Progreso.
 
 También se cargaron alias de uso común por las dudas: `prensa`, `leg press`,
 `dorsalera`, `polea al pecho`, `remo bajo`, `tijeras`, `desplantes`,
 `pantorrillas`, `rompecraneos`, `perro de caza`, `manguito rotador`, entre otros.
 
-## Los 38 ejercicios cargados
+## Los 39 ejercicios cargados
 
 **Pecho** — Press de banca · Press de banca con mancuernas · Press inclinado con
 mancuernas · Press inclinado 45° con mancuernas · Press inclinado con barra
@@ -106,7 +113,8 @@ mancuernas · Press inclinado 45° con mancuernas · Press inclinado con barra
 Remo en máquina · Remo en polea baja · Remo en punta (T-bar) · Peso muerto · Face pull
 
 **Hombros** — Elevaciones laterales · Elevaciones laterales en polea ·
-Press de hombros con mancuernas · Rotación externa en polea
+Pájaros (deltoide posterior) · Press de hombros con mancuernas ·
+Rotación externa en polea
 
 **Bíceps** — Curl con barra · Curl con barra Z · Curl con mancuernas · Curl martillo
 

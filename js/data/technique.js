@@ -35,10 +35,15 @@ export const ALIASES = {
   'estocadas': 'zancadas',
   'isquiotibiales en maquina': 'curl femoral sentado',
   'izquiotobiales en maquina': 'curl femoral sentado', // error de tipeo del original
-  'vuelos laterales': 'elevaciones laterales',
+  // OJO: el usuario confirmó que sus "vuelos laterales" eran PÁJAROS (hombro
+  // posterior, inclinado), no elevaciones laterales. Las elevaciones laterales
+  // del plan nuevo entran por su propio nombre, así que no se pisan.
+  'vuelos laterales': 'pajaros (deltoide posterior)',
+  'vuelos': 'pajaros (deltoide posterior)',
+  'vuelos posteriores': 'pajaros (deltoide posterior)',
+  'pajaros': 'pajaros (deltoide posterior)',
 
   // Variantes de nombre habituales
-  'vuelos': 'elevaciones laterales',
   'laterales': 'elevaciones laterales',
   'press banca': 'press de banca',
   'banca plana': 'press de banca',
@@ -294,7 +299,7 @@ export const TECHNIQUE = {
       'Encoger los hombros hacia las orejas.',
     ],
     caution: 'Ni un centímetro por encima de la horizontal. Techo RPE 7.',
-    note: 'Se anota el peso de UNA mancuerna. También la llamás "vuelos laterales".',
+    note: 'Se anota el peso de UNA mancuerna. Ojo: NO confundir con los "vuelos laterales" que hacías antes — esos eran pájaros (inclinado, hombro posterior). Este va parado y trabaja el hombro medio.',
   },
   'elevaciones laterales en polea': {
     primary: ['deltoide-med'], secondary: ['trapecio'],
@@ -302,6 +307,27 @@ export const TECHNIQUE = {
     exec: ['Subí el brazo por el costado hasta la horizontal.', 'Bajá lento resistiendo la polea.'],
     errors: ['Pasar la horizontal.', 'Inclinar el cuerpo para compensar.'],
     caution: 'Mismo límite que con mancuernas: hasta el paralelo y no más.',
+  },
+  'pajaros (deltoide posterior)': {
+    primary: ['deltoide-post'], secondary: ['trapecio', 'dorsal'],
+    setup: [
+      'Inclinate desde la cadera hasta que el torso quede casi paralelo al piso.',
+      'Si te molesta la espalda baja, hacelo sentado en la punta del banco con el pecho apoyado sobre los muslos.',
+      'Mancuernas colgando, palmas enfrentadas, codos apenas flexionados.',
+    ],
+    exec: [
+      'Abrí los brazos hacia los costados y atrás, guiando con los CODOS.',
+      'Subí hasta la línea de los hombros, no más.',
+      'Juntá suave los omóplatos al final y bajá controlado.',
+    ],
+    errors: [
+      'Enderezar el torso para tomar impulso.',
+      'Encoger los hombros hacia las orejas.',
+      'Flexionar mucho el codo: ahí deja de ser pájaro y pasa a ser remo.',
+      'Demasiado peso: es un músculo chico, necesita control, no carga.',
+    ],
+    caution: 'Trabaja el hombro posterior, que suele quedar flojo y es clave para la salud del manguito. Carga liviana y movimiento lento.',
+    note: 'Es el que anotabas como "Vuelos laterales". Se anota el peso de UNA mancuerna. Ojo: NO es lo mismo que las elevaciones laterales del plan nuevo, que se hacen parado y trabajan el hombro medio.',
   },
   'press de hombros con mancuernas': {
     primary: ['deltoide-ant', 'deltoide-med'], secondary: ['triceps', 'trapecio'],
