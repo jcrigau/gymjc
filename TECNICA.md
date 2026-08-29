@@ -130,6 +130,32 @@ Gato-camello + rotación torácica
 
 **Cardio** — Bicicleta fija
 
+## Ejercicios similares (cambiar cuando la máquina está ocupada)
+
+Vive en `js/data/similar.js` y **no hay que mantenerlo a mano**: deduce el
+*patrón de movimiento* de cada ejercicio a partir del nombre y el grupo, así
+que cubre los 162 de la biblioteca y también los personalizados que crees.
+
+Dos ejercicios se ofrecen como intercambiables si comparten el patrón
+(empuje horizontal, tracción vertical, bisagra de cadera, etc.). El orden se
+decide por puntaje:
+
+| Criterio | Puntos |
+|---|---|
+| Mismo patrón de movimiento | +10 |
+| Mismo grupo muscular | +5 |
+| **Ya lo hiciste alguna vez** (está en tu historial → existe en tu gimnasio) | +3 |
+| Distinto equipamiento (la máquina ocupada se reemplaza con otro implemento) | +2 |
+| Pasar de peso libre/máquina a peso corporal | −4 |
+
+Los ejercicios por tiempo solo se cambian por otros por tiempo, porque el
+formulario de carga es distinto.
+
+> ⚠️ **Si agregás reglas nuevas, cuidado con el orden.** La primera que
+> coincide gana. Por ejemplo, la regla de `Gemelos` tiene que ir **antes** que
+> la de sentadilla, porque "Elevación de gemelos en **prensa**" y "en **Smith**"
+> contienen palabras que matchean la regla de sentadilla.
+
 ## Checklist al actualizar rutinas
 
 1. ¿Los ejercicios nuevos ya están en `TECHNIQUE`? Si no, agregalos.

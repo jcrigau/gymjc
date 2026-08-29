@@ -11,7 +11,13 @@ const DEFAULT = {
   history: [], // sesiones: { id, date, routineId, routineName, entries: [...] }
   customExercises: [],
   favorites: [],
-  settings: { theme: 'dark', cargaOverrides: {} },
+  settings: {
+    theme: 'dark',
+    cargaOverrides: {},
+    restTimer: true,   // arrancar el descanso solo al guardar un ejercicio
+    defaultRest: 90,   // segundos, cuando la rutina no trae el dato del profe
+    keepAwake: true,   // pantalla encendida durante el entrenamiento
+  },
 };
 
 let db = load();
@@ -39,6 +45,7 @@ export const store = {
   // ------------------------------ Ajustes -------------------------------
   get settings() { return db.settings; },
   setTheme(theme) { db.settings.theme = theme; persist(); },
+  setSetting(key, value) { db.settings[key] = value; persist(); },
   setCargaOverride(id, carga) {
     if (!db.settings.cargaOverrides) db.settings.cargaOverrides = {};
     db.settings.cargaOverrides[id] = carga;

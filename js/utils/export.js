@@ -17,11 +17,11 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', '
 
 export const COLUMNS = [
   'fecha', 'anio', 'mes', 'semana_iso', 'dia_semana',
-  'sesion_id', 'rutina',
+  'sesion_id', 'rutina', 'sesion_duracion_min',
   'ejercicio', 'ejercicio_id', 'grupo', 'tipo', 'tipo_carga',
   'peso_kg', 'series', 'reps', 'rpe',
   'duracion_seg', 'tiempo_total_seg',
-  'factor_vol', 'volumen_kg', 'reps_totales', 'e1rm_kg',
+  'factor_vol', 'volumen_kg', 'reps_totales', 'e1rm_kg', 'record',
   'notas',
 ];
 
@@ -75,6 +75,7 @@ export function buildRows() {
         dia_semana: Number.isNaN(dt.getTime()) ? '' : DIAS[dt.getDay()],
         sesion_id: s.id || '',
         rutina: s.routineName || '',
+        sesion_duracion_min: s.durationSec ? Math.round(s.durationSec / 60) : null,
         ejercicio: e.name || meta.name || '',
         ejercicio_id: e.exerciseId || '',
         grupo: e.group || meta.group || '',
@@ -90,6 +91,7 @@ export function buildRows() {
         volumen_kg: weight && totalReps ? Math.round(weight * totalReps * factor * 10) / 10 : null,
         reps_totales: totalReps,
         e1rm_kg: epley(weight, reps),
+        record: e.pr ? 1 : 0,
         notas: (e.notes || '').replace(/\s*\n\s*/g, ' ').trim(),
       });
     }

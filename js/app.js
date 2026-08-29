@@ -12,7 +12,7 @@ import HistoryScreen from './screens/history.js';
 import StatsScreen from './screens/stats.js';
 import SettingsScreen from './screens/settings.js';
 
-export const VERSION = '1.10';
+export const VERSION = '1.11';
 
 const SCREENS = {
   home: HomeScreen,
@@ -38,8 +38,19 @@ export function applyTheme(theme = store.settings.theme) {
   if (meta) meta.setAttribute('content', resolved === 'dark' ? '#0a0a0b' : '#f5f5f7');
 }
 
+// Tareas de limpieza que dejó la pantalla actual (timers, wake lock, etc.).
+let cleanups = [];
+
+/** Una pantalla registra acá lo que hay que soltar cuando se la abandona. */
+export function onScreenLeave(fn) {
+  cleanups.push(fn);
+}
+
 function render({ route, params }) {
   const screen = SCREENS[route] || HomeScreen;
+  // Soltar recursos de la pantalla anterior antes de montar la nueva.
+  cleanups.forEach((fn) => { try { fn(); } catch { /* no frenar el render */ } });
+  cleanups = [];
   // Cierra hojas/overlays abiertas al cambiar de pantalla.
   document.querySelectorAll('.sheet, .backdrop').forEach((n) => n.remove());
   clear(app);

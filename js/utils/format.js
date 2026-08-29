@@ -49,6 +49,13 @@ export function fmtDuration(sec) {
   return r ? `${m}:${String(r).padStart(2, '0')} min` : `${m} min`;
 }
 
+/** Segundos a reloj mm:ss (para cuenta regresiva y cronómetro). */
+export function fmtClock(sec) {
+  const n = Math.max(0, Math.round(Number(sec) || 0));
+  const m = Math.floor(n / 60);
+  return `${m}:${String(n % 60).padStart(2, '0')}`;
+}
+
 /** Resumen tipo "50 kg · 4×8 · RPE 8", o "3 × 30 s · RPE 6" si es por tiempo. */
 export function fmtEntry(e) {
   const parts = [];

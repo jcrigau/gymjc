@@ -11,6 +11,7 @@ import { planImport, applyImport } from '../utils/import.js';
 import { PLAN_PROFE } from '../data/planProfe.js';
 
 const CHANGELOG = [
+  ['1.11', 'Seis mejoras para el gimnasio: (1) temporizador de descanso que arranca solo al guardar, con el tiempo que puso el profe, y avisa con vibración y sonido; (2) la pantalla ya no se apaga durante el entrenamiento; (3) cronómetro de duración que queda guardado en el historial; (4) te avisa cuando hacés un récord de peso 🏆; (5) al cambiar un ejercicio ahora te ofrece primero los equivalentes reales (mismo tipo de movimiento), ideal cuando la máquina está ocupada; (6) tocando la sugerencia o el plan del profe se cargan solos el peso, las series y las repeticiones.'],
   ['1.10', 'Corregido: los "Vuelos laterales" que hacías antes eran pájaros (inclinado, hombro posterior), no elevaciones laterales. Ahora abren la ficha correcta y se agregó la técnica de Pájaros. Las elevaciones laterales del plan nuevo (parado, hombro medio) siguen con su propia ficha, y cada una aclara en qué se diferencian.'],
   ['1.09', 'Nuevo botón "Cómo se hace" en cada ejercicio (dentro del entrenamiento y en la biblioteca): muestra un dibujo del cuerpo con los músculos que trabaja, la preparación, la ejecución paso a paso, los errores comunes y las advertencias de seguridad. Está cargado para los 38 ejercicios que usás o usaste alguna vez. Reconoce los nombres alternativos: "Subida al cajón" encuentra la técnica de Step up, "Vuelos laterales" la de Elevaciones laterales, y "Izquiotobiales"/"Isquiotibiales en máquina" la de Curl femoral sentado.'],
   ['1.08', 'Nuevo botón "Plan del profe · 8 semanas": suma las tres rutinas (Lunes A, Miércoles B, Viernes C) con el peso, series y RPE que indicó, sin borrar nada de lo que ya tenías. Durante el entrenamiento, cada ejercicio muestra ese objetivo (🎯) junto con la sugerencia automática de la app basada en tu última sesión. Se agregaron 4 ejercicios que faltaban en la biblioteca (Press inclinado 45° con mancuernas, Bird-dog, Pallof press, Gato-camello).'],
@@ -225,6 +226,46 @@ export default function SettingsScreen() {
     }));
   });
   screen.appendChild(seg);
+
+  // Entrenamiento
+  screen.appendChild(h('div', { class: 'section-title', text: 'Entrenamiento' }));
+
+  const toggleRow = (title, sub, key, def = true) => {
+    const input = h('input', {
+      type: 'checkbox', style: 'width:22px;height:22px;flex-shrink:0',
+      onChange: (e) => store.setSetting(key, e.target.checked),
+    });
+    input.checked = store.settings[key] !== false && (store.settings[key] ?? def) !== false;
+    return h('label', { class: 'row', style: 'cursor:pointer' }, [
+      h('div', { class: 'row-main' }, [
+        h('div', { class: 'row-title', style: 'font-size:16px', text: title }),
+        h('div', { class: 'row-sub', text: sub }),
+      ]),
+      input,
+    ]);
+  };
+
+  const restInput = h('input', {
+    class: 'input', inputmode: 'numeric', style: 'width:90px;text-align:center',
+    value: store.settings.defaultRest ?? 90,
+    onChange: (e) => {
+      const n = Math.min(600, Math.max(10, parseInt(e.target.value) || 90));
+      e.target.value = n;
+      store.setSetting('defaultRest', n);
+    },
+  });
+
+  screen.appendChild(h('div', { class: 'list' }, [
+    toggleRow('Temporizador de descanso', 'Arranca solo al guardar un ejercicio', 'restTimer'),
+    h('div', { class: 'row' }, [
+      h('div', { class: 'row-main' }, [
+        h('div', { class: 'row-title', style: 'font-size:16px', text: 'Descanso por defecto' }),
+        h('div', { class: 'row-sub', text: 'Segundos, cuando la rutina no trae el dato del profe' }),
+      ]),
+      restInput,
+    ]),
+    toggleRow('Pantalla siempre encendida', 'Durante el entrenamiento, para no desbloquear entre series', 'keepAwake'),
+  ]));
 
   // Datos
   screen.appendChild(h('div', { class: 'section-title', text: 'Datos' }));

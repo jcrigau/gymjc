@@ -3,6 +3,7 @@
 import { store } from '../store.js';
 import { h, icon, clear, hapticTap } from '../utils/dom.js';
 import { GROUPS, TYPES, groupMeta, allExercises, CARGA_OPTIONS } from '../data/exercises.js';
+import { similarTo } from '../data/similar.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { fmtEntry } from '../utils/format.js';
@@ -183,8 +184,15 @@ export default function LibraryScreen() {
  * `closeOnPick` cierra el sheet tras la primera selección (para "cambiar").
  * `title`/`subtitle` permiten personalizar el encabezado.
  */
-export function openExercisePicker({ exclude = new Set(), onPick, closeOnPick = false, title = 'Agregar ejercicios', subtitle = 'Tocá para sumarlos a la rutina' } = {}) {
-  const state = { query: '', group: '' };
+export function openExercisePicker({
+  exclude = new Set(), onPick, closeOnPick = false,
+  title = 'Agregar ejercicios', subtitle = 'Tocá para sumarlos a la rutina',
+  similarTo: reference = null,   // si viene, arranca ofreciendo equivalentes
+} = {}) {
+  const similares = reference ? similarTo(reference, { exclude }) : [];
+  // Con equivalentes a mano se arranca ahí; si no hay, en la biblioteca entera.
+  const state = { query: '', group: similares.length ? '~sim' : '' };
+
   let api;
   api = openSheet({
     title,
@@ -193,19 +201,55 @@ export function openExercisePicker({ exclude = new Set(), onPick, closeOnPick = 
       const wrap = h('div', {});
       const search = h('div', { class: 'search' }, [
         icon('search'),
-        h('input', { placeholder: 'Buscar…', onInput: (e) => { state.query = e.target.value; refresh(); } }),
+        h('input', {
+          placeholder: 'Buscar…',
+          onInput: (e) => {
+            state.query = e.target.value;
+            // Al escribir se busca en toda la biblioteca, no solo en similares.
+            if (state.query && state.group === '~sim') state.group = '';
+            refresh();
+          },
+        }),
       ]);
+
       const chips = h('div', { class: 'chips' });
-      [{ id: '', label: 'Todos' }, ...GROUPS.map((g) => ({ id: g.id, label: g.id }))].forEach((c) => {
-        chips.appendChild(h('button', { class: 'chip', text: c.label, dataset: { g: c.id }, onClick: () => { state.group = c.id; refresh(); } }));
+      const chipDefs = [
+        ...(similares.length ? [{ id: '~sim', label: '⚡ Similares' }] : []),
+        { id: '', label: 'Todos' },
+        ...GROUPS.map((g) => ({ id: g.id, label: g.id })),
+      ];
+      chipDefs.forEach((c) => {
+        chips.appendChild(h('button', {
+          class: 'chip', text: c.label, dataset: { g: c.id },
+          onClick: () => { state.group = c.id; refresh(); },
+        }));
       });
+
       const list = h('div', { class: 'list', style: 'margin-top:8px' });
       wrap.append(search, chips, list);
 
       function refresh() {
         chips.querySelectorAll('.chip').forEach((el) => el.classList.toggle('active', el.dataset.g === state.group));
         clear(list);
-        filterExercises({ query: state.query, group: state.group }).forEach((ex) => {
+
+        const showingSimilar = state.group === '~sim';
+        const results = showingSimilar
+          ? similares
+          : filterExercises({ query: state.query, group: state.group });
+
+        if (showingSimilar) {
+          list.appendChild(h('div', {
+            class: 'small muted', style: 'margin:0 4px 4px',
+            text: `Mismo tipo de movimiento que ${reference.name}. Mantienen el estímulo aunque cambies de máquina.`,
+          }));
+        }
+
+        if (!results.length) {
+          list.appendChild(h('div', { class: 'empty' }, [icon('search'), h('h3', { text: 'Sin resultados' })]));
+          return;
+        }
+
+        results.forEach((ex) => {
           const added = exclude.has(ex.id);
           list.appendChild(exerciseRow(ex, {
             onClick: () => {

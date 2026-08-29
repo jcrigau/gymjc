@@ -478,6 +478,58 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 }
 .segmented button.active { background: var(--accent); color: #fff; }
 
+/* ------------------------ Temporizador de descanso ----------------------- */
+.rest-bar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 250;
+  background: var(--bg-elev-2);
+  border-top: 1px solid var(--border);
+  padding: 0 16px calc(var(--safe-bottom) + 10px);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.35);
+  animation: rest-in 0.3s var(--ease);
+}
+@keyframes rest-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.rest-track { height: 4px; background: var(--border); margin: 0 -16px 10px; }
+.rest-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.25s linear; }
+.rest-row { display: flex; align-items: center; gap: 12px; }
+.rest-row > .ic { color: var(--accent); }
+.rest-label { font-size: 12px; color: var(--text-2); }
+.rest-time { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.rest-btn {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 15px; font-weight: 700;
+  flex-shrink: 0;
+}
+.rest-btn:active { transform: scale(0.92); }
+.rest-btn.close { padding: 10px; color: var(--text-2); }
+
+.rest-bar.done .rest-fill { background: var(--green); }
+.rest-bar.done .rest-time,
+.rest-bar.done .rest-label { color: var(--green); }
+.rest-bar.done { animation: rest-pulse 0.6s ease 2; }
+@keyframes rest-pulse { 50% { background: rgba(48, 209, 88, 0.15); } }
+
+/* --------------------- Tarjetas que aplican valores ---------------------- */
+.tappable { cursor: pointer; position: relative; transition: transform 0.12s var(--ease); }
+.tappable:active { transform: scale(0.985); }
+.tap-hint {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 8px;
+  font-size: 12px; font-weight: 600;
+  color: var(--accent);
+  opacity: 0.9;
+}
+.tap-hint .ic { font-size: 14px; }
+
+/* Récord personal */
+.pr-badge { margin-left: 6px; font-size: 15px; }
+
 canvas { width: 100%; display: block; }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,7 +2,7 @@
 // y edición/eliminación de registros.
 import { store } from '../store.js';
 import { h, icon, clear } from '../utils/dom.js';
-import { fmtLong, fmtShort, relative, fmtEntry, fmtWeight, entryVolume } from '../utils/format.js';
+import { fmtLong, fmtShort, relative, fmtEntry, fmtWeight, entryVolume, fmtClock } from '../utils/format.js';
 import { exerciseById } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
@@ -183,11 +183,17 @@ export default function HistoryScreen(params) {
     }
     items.forEach((s) => {
       const vol = (s.entries || []).reduce((a, e) => a + entryVolume(e), 0);
+      const prs = (s.entries || []).filter((e) => e.pr).length;
+      const extra = [
+        s.durationSec ? `⏱ ${fmtClock(s.durationSec)}` : null,
+        prs ? `🏆 ${prs}` : null,
+      ].filter(Boolean).join(' · ');
       list.appendChild(h('div', { class: 'row', onClick: () => sessionDetail(s, () => { refreshDates(); renderList(); }) }, [
         h('div', { class: 'icon-badge', style: 'background:#0a84ff' }, [icon('calendar')]),
         h('div', { class: 'row-main' }, [
           h('div', { class: 'row-title', text: s.routineName || 'Entrenamiento' }),
           h('div', { class: 'row-sub', text: `${fmtShort(s.date)} · ${relative(s.date)} · ${s.entries.length} ej · ${fmtWeight(Math.round(vol))} kg vol` }),
+          extra ? h('div', { class: 'row-sub', text: extra }) : null,
         ]),
         icon('chevron'),
       ]));
