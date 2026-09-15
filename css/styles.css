@@ -527,6 +527,29 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 }
 .tap-hint .ic { font-size: 14px; }
 
+/* ------------------------- Series hechas (círculos) ---------------------- */
+.set-dots { display: flex; flex-wrap: wrap; gap: 10px; }
+.set-dot {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--input-bg);
+  border: 2px solid var(--border);
+  color: var(--text-2);
+  font-size: 19px; font-weight: 700;
+  display: grid; place-items: center;
+  transition: transform 0.12s var(--ease), background 0.2s, border-color 0.2s;
+}
+.set-dot:active { transform: scale(0.88); }
+.set-dot.done {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+/* Ejercicio empezado pero sin cerrar */
+.check.partial { border-color: var(--accent); border-style: dashed; }
+.check.partial .ic { display: none; }
+
 /* Récord personal */
 .pr-badge { margin-left: 6px; font-size: 15px; }
 

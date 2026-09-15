@@ -167,7 +167,84 @@ function openEntrySheet(exercise, session, onSaved, target) {
         );
       }
 
+      // ── Series hechas ──────────────────────────────────────────────────
+      // Se marca cada serie AL TERMINARLA y ahí arranca el descanso, que es
+      // cuando realmente empieza. Guardar queda solo para cerrar el ejercicio.
+      const carga = exercise.carga || 'simple';
+      const restSecs = () => target?.rest || store.settings.defaultRest || 90;
+
+      let setsDone = Number(existing?.setsDone) || 0;
+      // Cuántos círculos mostrar: lo que pide el plan, lo que haya en el campo
+      // y lo ya hecho. Si reabrís a mitad, siguen estando las que faltan.
+      let plannedSets = Math.max(
+        1, setsDone, Number(sStep.get()) || 0, Number(target?.sets) || 0,
+      );
+
+      const buildEntry = (extra = {}) => ({
+        exerciseId: exercise.id,
+        name: exercise.name,
+        group: exercise.group,
+        weight: timed ? null : wStep.get(),
+        sets: sStep.get(),
+        reps: timed ? null : rStep.get(),
+        seconds: timed ? secStep.get() : null,
+        rpe: rpeStep.get(),
+        notes: notes.value.trim(),
+        carga,                            // convención con la que se registró
+        cargaFactor: cargaFactor(carga),  // factor para el volumen (1 o 2)
+        setsDone: setsDone || undefined,
+        ...extra,
+      });
+
+      const dots = h('div', { class: 'set-dots' });
+      const progressTxt = h('div', { class: 'small muted', style: 'margin:6px 4px 0' });
+
+      const renderDots = () => {
+        clear(dots);
+        const total = Math.min(12, Math.max(plannedSets, setsDone, 1));
+        for (let i = 1; i <= total; i++) {
+          dots.appendChild(h('button', {
+            class: 'set-dot' + (i <= setsDone ? ' done' : ''),
+            text: String(i),
+            onClick: () => markSet(i),
+          }));
+        }
+        progressTxt.textContent = setsDone
+          ? `${setsDone} de ${Math.max(plannedSets, setsDone)} hechas. Tocá la última para desmarcarla.`
+          : 'Tocá cada serie al terminarla: el descanso arranca solo.';
+      };
+
+      function markSet(n) {
+        const sumando = n > setsDone;
+        // Tocar la última marcada la desmarca, para corregir un toque de más.
+        setsDone = (n === setsDone) ? n - 1 : n;
+        // Las series registradas pasan a ser las que realmente hiciste.
+        if (setsDone > 0) sStep.input.value = String(setsDone);
+        renderDots();
+        hapticTap();
+        // Se guarda en el acto: si cerrás la app a mitad del ejercicio, el
+        // progreso no se pierde.
+        onSaved(buildEntry({ partial: true }));
+        if (sumando && store.settings.restTimer !== false) {
+          startRest(restSecs(), `${exercise.name} · serie ${setsDone}`);
+        }
+      }
+
+      // Si tocás el campo Series a mano, se ajusta la cantidad de círculos.
+      const syncPlanned = () => {
+        plannedSets = Math.max(1, Number(sStep.get()) || 1);
+        renderDots();
+      };
+      sStep.input.addEventListener('input', syncPlanned);
+      sStep.el.addEventListener('click', syncPlanned);
+      renderDots();
+
       wrap.append(
+        h('div', { class: 'field' }, [
+          h('label', { text: 'Series hechas' }),
+          dots,
+          progressTxt,
+        ]),
         h('div', { class: 'field' }, [h('label', { text: 'RPE (1-10)' }), rpeStep.el]),
         h('div', { class: 'field' }, [h('label', { text: 'Notas' }), notes]),
         h('button', {
@@ -188,22 +265,7 @@ function openEntrySheet(exercise, session, onSaved, target) {
             // hacés un ejercicio siempre sería "récord" y no significa nada.
             const isPR = !timed && weight > 0 && histMax > 0 && weight > histMax;
 
-            const carga = exercise.carga || 'simple';
-            const entry = {
-              exerciseId: exercise.id,
-              name: exercise.name,
-              group: exercise.group,
-              weight,
-              sets: sStep.get(),
-              reps: timed ? null : rStep.get(),
-              seconds: timed ? secStep.get() : null,
-              rpe: rpeStep.get(),
-              notes: notes.value.trim(),
-              carga,                      // convención con la que se registró
-              cargaFactor: cargaFactor(carga), // factor para el volumen (1 o 2)
-              pr: isPR || undefined,
-            };
-            onSaved(entry);
+            onSaved(buildEntry({ partial: undefined, pr: isPR || undefined }));
             api.close();
 
             if (isPR) {
@@ -213,9 +275,10 @@ function openEntrySheet(exercise, session, onSaved, target) {
               toast('Ejercicio registrado', 'success');
             }
 
-            // El descanso arranca solo, con el tiempo que puso el profe.
-            if (store.settings.restTimer !== false) {
-              startRest(target?.rest || store.settings.defaultRest || 90, exercise.name);
+            // Si fuiste marcando serie por serie, el descanso ya viene
+            // corriendo desde la última: no se pisa.
+            if (!setsDone && store.settings.restTimer !== false) {
+              startRest(restSecs(), exercise.name);
             }
           },
         }, [icon('check'), 'Guardar']),
@@ -355,7 +418,9 @@ export default function WorkoutScreen(params) {
 
   function render() {
     clear(list);
-    const done = new Set(session.entries.map((e) => e.exerciseId));
+    // Un ejercicio a medias (series marcadas, sin Guardar) no cuenta como
+    // completado, pero sí muestra su avance.
+    const done = new Set(session.entries.filter((e) => !e.partial).map((e) => e.exerciseId));
     progress.textContent = `${done.size} de ${exerciseIds.length} completados`;
 
     exerciseIds.forEach((id) => {
@@ -367,17 +432,20 @@ export default function WorkoutScreen(params) {
       const target = routine.targets?.[id];
       // Referencia rápida sin abrir la hoja: qué hiciste la vez anterior, o si
       // nunca lo hiciste, el objetivo del profe para esta rutina.
-      const prev = isDone ? null : store.lastEntry(id, session.id);
+      const prev = isDone || entry ? null : store.lastEntry(id, session.id);
       const targetSub = target && (target.weight != null || (target.sets && target.reps))
         ? `🎯 ${[target.weight != null ? `${fmtWeight(target.weight)} kg` : null, target.sets && target.reps ? `${target.sets}×${target.reps}` : null].filter(Boolean).join(' · ')}`
         : null;
-      const sub = isDone
+      const enCurso = entry?.partial
+        ? `En curso · ${entry.setsDone || 0} de ${Math.max(Number(target?.sets) || 0, Number(entry.sets) || 0, entry.setsDone || 0)} series`
+        : null;
+      const sub = enCurso || (isDone
         ? fmtEntry(entry)
         : prev
           ? `Ant: ${fmtEntry(prev)} · ${relative(prev.date)}`
-          : targetSub || `${g.id} · ${ex.type}`;
+          : targetSub || `${g.id} · ${ex.type}`);
       list.appendChild(h('div', { class: 'row', onClick: () => openEntrySheet(ex, session, upsert, target) }, [
-        h('div', { class: 'check' + (isDone ? ' done' : '') }, [icon('check')]),
+        h('div', { class: 'check' + (isDone ? ' done' : (entry?.partial ? ' partial' : '')) }, [icon('check')]),
         h('div', { class: 'row-main' }, [
           h('div', { class: 'row-title' }, [ex.name, entry?.pr ? h('span', { class: 'pr-badge', text: '🏆' }) : null]),
           h('div', { class: 'row-sub', text: sub }),
