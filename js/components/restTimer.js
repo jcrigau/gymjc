@@ -15,7 +15,7 @@ let audioCtx = null;
 
 /** Pitido de aviso. El contexto se crea al iniciar (dentro del gesto del
  *  usuario) porque iOS bloquea el audio creado fuera de una interacción. */
-function primeAudio() {
+export function primeAudio() {
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -24,7 +24,7 @@ function primeAudio() {
   } catch { /* sin audio, el aviso queda en la vibración */ }
 }
 
-function beep() {
+export function beep() {
   if (!audioCtx) return;
   try {
     const now = audioCtx.currentTime;

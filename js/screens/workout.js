@@ -11,7 +11,8 @@ import { todayISO, fmtEntry, relative, fmtDuration, fmtWeight, fmtClock } from '
 import { suggest } from '../utils/progression.js';
 import { openExercisePicker } from './library.js';
 import { openTechniqueSheet, hasTechnique } from '../components/techniqueSheet.js';
-import { startRest, stopRest } from '../components/restTimer.js';
+import { startRest, stopRest, primeAudio, beep } from '../components/restTimer.js';
+import { similarTo } from '../data/similar.js';
 import { keepScreenAwake, releaseScreen } from '../utils/wakeLock.js';
 import { onScreenLeave } from '../app.js';
 
@@ -34,8 +35,16 @@ function stepper({ value = 0, step = 1, min = 0, max = 999, decimals = 0 }) {
   return { el, get: () => input.value.trim() === '' ? null : clampFmt(parseFloat(input.value.replace(',', '.')) || 0), input };
 }
 
-function openEntrySheet(exercise, session, onSaved, target) {
+/**
+ * Hoja de carga de un ejercicio.
+ * ctx: { onSaved, target, exclude, onSwap(nuevoEj), onMore() }
+ *   onSwap/onMore permiten reemplazarlo por un similar desde la misma hoja.
+ */
+function openEntrySheet(exercise, session, ctx = {}) {
+  const { onSaved, target, exclude = new Set(), onSwap, onMore } = ctx;
   const existing = (session.entries || []).find((e) => e.exerciseId === exercise.id);
+  // Cronómetro de los ejercicios por tiempo: se corta si se cierra la hoja.
+  let swTick = null;
   const last = store.lastEntry(exercise.id, session.id);
   const sug = suggest(last, exercise);
 
@@ -54,18 +63,67 @@ function openEntrySheet(exercise, session, onSaved, target) {
   openSheet({
     title: exercise.name,
     subtitle: `${exercise.group} · ${exercise.type}`,
+    onClose: () => clearInterval(swTick),
     body: (api) => {
       const wrap = h('div', {});
 
-      // Acceso a la técnica sin estorbar la carga rápida: chico y arriba.
-      if (hasTechnique(exercise)) {
-        wrap.appendChild(h('div', { style: 'display:flex;justify-content:flex-end;margin:-4px 0 10px' }, [
-          h('button', {
-            class: 'btn ghost small',
-            style: 'width:auto;padding:6px 10px',
+      // ── Arriba: técnica y "no hay máquina" ─────────────────────────────
+      // Chicos, para no estorbar la carga rápida. Reemplazar solo se ofrece
+      // si todavía no empezaste el ejercicio (si no, perderías lo cargado).
+      const canSwap = onSwap && !existing;
+      const simBox = h('div');
+      let simOpen = false;
+
+      const toggleSimilares = () => {
+        simOpen = !simOpen;
+        clear(simBox);
+        if (!simOpen) return;
+
+        const opciones = similarTo(exercise, { exclude, limit: 4 });
+        const box = h('div', { class: 'card similar-box' }, [
+          h('div', { class: 'small', style: 'font-weight:700;margin-bottom:8px', text: 'Reemplazos que mantienen el estímulo' }),
+        ]);
+
+        if (!opciones.length) {
+          box.appendChild(h('div', { class: 'small muted', text: 'No encontré equivalentes directos.' }));
+        }
+        opciones.forEach((op) => {
+          const ult = store.lastEntry(op.id);
+          box.appendChild(h('button', {
+            class: 'similar-opt',
+            onClick: () => { api.close(); onSwap(op); },
+          }, [
+            h('div', { class: 'grow', style: 'text-align:left' }, [
+              h('div', { style: 'font-weight:600', text: op.name }),
+              h('div', {
+                class: 'small muted',
+                text: ult ? `Ya lo hiciste · ${fmtEntry(ult)}` : `${op.type} · no lo hiciste todavía`,
+              }),
+            ]),
+            icon('swap'),
+          ]));
+        });
+        if (onMore) {
+          box.appendChild(h('button', {
+            class: 'btn ghost small', style: 'width:auto;padding:6px 0;margin-top:4px',
+            onClick: () => { api.close(); onMore(); },
+          }, ['Ver más opciones']));
+        }
+        simBox.appendChild(box);
+      };
+
+      if (hasTechnique(exercise) || canSwap) {
+        wrap.appendChild(h('div', { style: 'display:flex;justify-content:space-between;gap:8px;margin:-4px 0 10px' }, [
+          canSwap ? h('button', {
+            class: 'btn ghost small', style: 'width:auto;padding:6px 10px',
+            onClick: toggleSimilares,
+          }, [icon('swap'), '¿No hay máquina?']) : h('span'),
+          hasTechnique(exercise) ? h('button', {
+            class: 'btn ghost small', style: 'width:auto;padding:6px 10px',
             onClick: () => openTechniqueSheet(exercise),
-          }, [icon('info'), 'Cómo se hace']),
+          }, [icon('info'), 'Cómo se hace']) : null,
         ]));
+        wrap.appendChild(simBox);
       }
 
       const timed = !!exercise.timed;
@@ -74,7 +132,7 @@ function openEntrySheet(exercise, session, onSaved, target) {
       const notes = h('textarea', { class: 'textarea', placeholder: 'Notas (opcional)', text: seed.notes || '' });
 
       // Por tiempo: segundos por serie. Por carga: peso y repeticiones.
-      const secStep = timed ? stepper({ value: seed.seconds ?? 30, step: 5, min: 5, max: 3600 }) : null;
+      const secStep = timed ? stepper({ value: seed.seconds ?? 30, step: 5, min: 1, max: 3600 }) : null;
       const wStep = timed ? null : stepper({ value: seed.weight ?? '', step: 2.5, min: 0, max: 999, decimals: 1 });
       const rStep = timed ? null : stepper({ value: seed.reps ?? 10, step: 1, min: 1, max: 100 });
 
@@ -133,7 +191,77 @@ function openEntrySheet(exercise, session, onSaved, target) {
         ]), { weight: sug.weight, sets: sug.sets, reps: sug.reps, seconds: sug.seconds }));
       }
 
+      // ── Cronómetro (solo ejercicios por tiempo) ────────────────────────
+      // Iniciar al empezar la serie, Detener al terminarla: marca la serie,
+      // guarda el tiempo y arranca el descanso. Avisa al llegar al objetivo.
+      let setTimes = Array.isArray(existing?.setTimes) ? [...existing.setTimes] : [];
+      const goalSec = timed ? (Number(secStep.get()) || 0) : 0;
+      let swStart = 0;
+      let reached = false;
+
+      const swTime = h('div', { class: 'sw-time', text: '0:00' });
+      const swGoal = h('div', { class: 'small muted', style: 'margin-top:4px' });
+      const swLaps = h('div', { class: 'small muted', style: 'margin-top:8px' });
+      const swBtn = h('button', { class: 'btn sw-btn' });
+      const stopwatch = h('div', { class: 'card stopwatch' }, [swTime, swGoal, swBtn, swLaps]);
+
+      const paintLaps = () => {
+        swLaps.textContent = setTimes.length
+          ? setTimes.map((t, i) => `S${i + 1}: ${fmtClock(t)}`).join(' · ')
+          : '';
+      };
+      const paintIdle = () => {
+        stopwatch.classList.remove('running', 'reached');
+        swTime.textContent = '0:00';
+        swGoal.textContent = goalSec ? `Objetivo: ${fmtClock(goalSec)} por serie` : '';
+        clear(swBtn);
+        const extra = setsDone >= plannedSets;
+        swBtn.classList.toggle('secondary', extra);
+        swBtn.append(icon('play'), extra ? 'Serie extra' : `Iniciar serie ${setsDone + 1}`);
+      };
+
+      function startStopwatch() {
+        primeAudio();          // el aviso sonoro necesita un toque del usuario
+        stopRest();            // si arrancás la serie, el descanso terminó
+        swStart = Date.now();
+        reached = false;
+        stopwatch.classList.add('running');
+        swBtn.classList.remove('secondary');
+        clear(swBtn);
+        swBtn.append(icon('check'), 'Detener');
+        swTick = setInterval(() => {
+          if (!swTime.isConnected) { clearInterval(swTick); return; }
+          const sec = (Date.now() - swStart) / 1000;
+          swTime.textContent = fmtClock(sec);
+          if (goalSec && !reached && sec >= goalSec) {
+            reached = true;
+            stopwatch.classList.add('reached');
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            beep();
+          }
+        }, 200);
+      }
+
+      function stopStopwatch() {
+        clearInterval(swTick);
+        swTick = null;
+        const sec = Math.round((Date.now() - swStart) / 1000);
+        swStart = 0;
+        if (sec >= 1) {
+          setTimes.push(sec);
+          // Tiempo por serie = promedio de lo que realmente aguantaste.
+          const avg = Math.round(setTimes.reduce((a, b) => a + b, 0) / setTimes.length);
+          secStep.input.value = String(avg);
+          markSet(setsDone + 1);
+        }
+        paintLaps();
+        paintIdle();
+      }
+
+      swBtn.addEventListener('click', () => (swStart ? stopStopwatch() : startStopwatch()));
+
       if (timed) {
+        wrap.appendChild(stopwatch);
         const total = h('div', { class: 'small muted', style: 'margin:-6px 0 12px' });
         const refreshTotal = () => {
           const t = (secStep.get() || 0) * (sStep.get() || 0);
@@ -193,11 +321,13 @@ function openEntrySheet(exercise, session, onSaved, target) {
         carga,                            // convención con la que se registró
         cargaFactor: cargaFactor(carga),  // factor para el volumen (1 o 2)
         setsDone: setsDone || undefined,
+        setTimes: setTimes.length ? [...setTimes] : undefined,
         ...extra,
       });
 
       const dots = h('div', { class: 'set-dots' });
       const progressTxt = h('div', { class: 'small muted', style: 'margin:6px 4px 0' });
+      let saveBtn = null;
 
       const renderDots = () => {
         clear(dots);
@@ -209,23 +339,40 @@ function openEntrySheet(exercise, session, onSaved, target) {
             onClick: () => markSet(i),
           }));
         }
-        progressTxt.textContent = setsDone
-          ? `${setsDone} de ${Math.max(plannedSets, setsDone)} hechas. Tocá la última para desmarcarla.`
-          : 'Tocá cada serie al terminarla: el descanso arranca solo.';
+        const allDone = setsDone > 0 && setsDone >= plannedSets;
+        progressTxt.textContent = allDone
+          ? '¡Todas hechas! Tocá Guardar para cerrar el ejercicio.'
+          : setsDone
+            ? `${setsDone} de ${Math.max(plannedSets, setsDone)} hechas. Tocá la última para desmarcarla.`
+            : timed
+              ? 'Usá el cronómetro, o tocá cada serie al terminarla.'
+              : 'Tocá cada serie al terminarla: el descanso arranca solo.';
+        // Con todo hecho, Guardar es lo único que falta: se destaca.
+        if (saveBtn) saveBtn.classList.toggle('btn-pulse', allDone);
       };
 
       function markSet(n) {
         const sumando = n > setsDone;
         // Tocar la última marcada la desmarca, para corregir un toque de más.
         setsDone = (n === setsDone) ? n - 1 : n;
+        // Si desmarcás, se va también el tiempo de esa serie.
+        if (setTimes.length > setsDone) setTimes = setTimes.slice(0, setsDone);
         // Las series registradas pasan a ser las que realmente hiciste.
         if (setsDone > 0) sStep.input.value = String(setsDone);
         renderDots();
+        if (timed) { paintLaps(); if (!swStart) paintIdle(); }
         hapticTap();
         // Se guarda en el acto: si cerrás la app a mitad del ejercicio, el
         // progreso no se pierde.
         onSaved(buildEntry({ partial: true }));
-        if (sumando && store.settings.restTimer !== false) {
+
+        if (!sumando) return;
+        // Después de la ÚLTIMA serie no hay descanso: lo que sigue es cambiar
+        // de ejercicio, y un temporizador corriendo ahí no tiene sentido.
+        if (setsDone >= plannedSets) {
+          stopRest();
+          toast('¡Última serie! Guardá el ejercicio', 'success');
+        } else if (store.settings.restTimer !== false) {
           startRest(restSecs(), `${exercise.name} · serie ${setsDone}`);
         }
       }
@@ -237,18 +384,12 @@ function openEntrySheet(exercise, session, onSaved, target) {
       };
       sStep.input.addEventListener('input', syncPlanned);
       sStep.el.addEventListener('click', syncPlanned);
-      renderDots();
+      if (timed) { paintLaps(); paintIdle(); }
 
-      wrap.append(
-        h('div', { class: 'field' }, [
-          h('label', { text: 'Series hechas' }),
-          dots,
-          progressTxt,
-        ]),
-        h('div', { class: 'field' }, [h('label', { text: 'RPE (1-10)' }), rpeStep.el]),
-        h('div', { class: 'field' }, [h('label', { text: 'Notas' }), notes]),
-        h('button', {
+      saveBtn = h('button', {
           class: 'btn', onClick: () => {
+            // Si el cronómetro sigue corriendo, esa serie cuenta.
+            if (swStart) stopStopwatch();
             const weight = timed ? null : wStep.get();
 
             // Máximo histórico, sin contar lo de hoy: sirve para el aviso de
@@ -274,14 +415,22 @@ function openEntrySheet(exercise, session, onSaved, target) {
             } else {
               toast('Ejercicio registrado', 'success');
             }
-
-            // Si fuiste marcando serie por serie, el descanso ya viene
-            // corriendo desde la última: no se pisa.
-            if (!setsDone && store.settings.restTimer !== false) {
-              startRest(restSecs(), exercise.name);
-            }
+            // Guardar = ejercicio terminado. No se arranca descanso: lo que
+            // sigue es pasar al próximo ejercicio.
           },
-        }, [icon('check'), 'Guardar']),
+        }, [icon('check'), 'Guardar']);
+
+      renderDots();
+
+      wrap.append(
+        h('div', { class: 'field' }, [
+          h('label', { text: 'Series hechas' }),
+          dots,
+          progressTxt,
+        ]),
+        h('div', { class: 'field' }, [h('label', { text: 'RPE (1-10)' }), rpeStep.el]),
+        h('div', { class: 'field' }, [h('label', { text: 'Notas' }), notes]),
+        saveBtn,
       );
       return wrap;
     },
@@ -367,9 +516,35 @@ export default function WorkoutScreen(params) {
     if (session.entries.length !== before && session.id) store.saveSession(session);
   }
 
+  // Objetivo del profe para un ejercicio: el de la rutina, o el heredado si
+  // hoy lo pusiste en reemplazo de otro.
+  const targetFor = (id) => routine.targets?.[id] || session.swapTargets?.[id];
+
   // Reemplaza un ejercicio por otro solo en el entrenamiento de hoy.
-  // Arranca mostrando equivalentes reales (mismo patrón de movimiento), que es
-  // lo que se necesita cuando la máquina está ocupada.
+  function replaceExercise(oldId, nuevo) {
+    const i = exerciseIds.indexOf(oldId);
+    if (i >= 0) exerciseIds[i] = nuevo.id;
+
+    // El reemplazo hereda series, reps, RPE y descanso del plan: el estímulo
+    // que pidió el profe es el mismo. El peso NO se hereda (es otra máquina)
+    // ni la nota (era específica del ejercicio original).
+    const viejo = targetFor(oldId);
+    if (viejo && !routine.targets?.[nuevo.id]) {
+      const { weight, note, ...resto } = viejo;
+      const nombreViejo = exerciseById(oldId)?.name || 'el original';
+      session.swapTargets = {
+        ...(session.swapTargets || {}),
+        [nuevo.id]: { ...resto, note: `En lugar de ${nombreViejo}. Ajustá el peso a esta máquina.` },
+      };
+    }
+
+    dropEntry(oldId); // si ya estaba registrado, se descarta
+    persistList();
+    render();
+    toast(`Cambiado por ${nuevo.name}`);
+  }
+
+  // Selector completo (biblioteca), arrancando por los equivalentes.
   function swapExercise(oldId) {
     openExercisePicker({
       title: 'Cambiar ejercicio',
@@ -377,14 +552,23 @@ export default function WorkoutScreen(params) {
       similarTo: exerciseById(oldId),
       exclude: new Set(exerciseIds),
       closeOnPick: true,
-      onPick: (ex) => {
-        const i = exerciseIds.indexOf(oldId);
-        if (i >= 0) exerciseIds[i] = ex.id;
-        dropEntry(oldId); // si ya estaba registrado, se descarta
-        persistList();
-        render();
-        toast('Ejercicio cambiado');
+      onPick: (ex) => replaceExercise(oldId, ex),
+    });
+  }
+
+  // Abre la hoja de carga con todo lo que necesita, incluido el reemplazo.
+  function openEntry(ex) {
+    openEntrySheet(ex, session, {
+      onSaved: upsert,
+      target: targetFor(ex.id),
+      exclude: new Set(exerciseIds),
+      // Al elegir un similar se reemplaza y se abre directo el nuevo, para
+      // seguir entrenando sin volver a la lista.
+      onSwap: (nuevo) => {
+        replaceExercise(ex.id, nuevo);
+        setTimeout(() => openEntry(nuevo), 380);
       },
+      onMore: () => swapExercise(ex.id),
     });
   }
 
@@ -409,8 +593,8 @@ export default function WorkoutScreen(params) {
     openSheet({
       title: ex.name,
       body: (api) => h('div', { class: 'vstack' }, [
-        h('button', { class: 'btn secondary', onClick: () => { api.close(); openEntrySheet(ex, session, upsert, routine.targets?.[ex.id]); } }, [icon('edit'), 'Registrar / editar']),
-        h('button', { class: 'btn secondary', onClick: () => { api.close(); swapExercise(ex.id); } }, [icon('swap'), 'Cambiar por otro']),
+        h('button', { class: 'btn secondary', onClick: () => { api.close(); openEntry(ex); } }, [icon('edit'), 'Registrar / editar']),
+        h('button', { class: 'btn secondary', onClick: () => { api.close(); swapExercise(ex.id); } }, [icon('swap'), 'Cambiar por similar']),
         h('button', { class: 'btn danger', onClick: () => { api.close(); removeExercise(ex.id); } }, [icon('delete'), 'Quitar de hoy']),
       ]),
     });
@@ -429,7 +613,7 @@ export default function WorkoutScreen(params) {
       const g = groupMeta(ex.group);
       const isDone = done.has(id);
       const entry = session.entries.find((e) => e.exerciseId === id);
-      const target = routine.targets?.[id];
+      const target = targetFor(id);
       // Referencia rápida sin abrir la hoja: qué hiciste la vez anterior, o si
       // nunca lo hiciste, el objetivo del profe para esta rutina.
       const prev = isDone || entry ? null : store.lastEntry(id, session.id);
@@ -444,7 +628,7 @@ export default function WorkoutScreen(params) {
         : prev
           ? `Ant: ${fmtEntry(prev)} · ${relative(prev.date)}`
           : targetSub || `${g.id} · ${ex.type}`);
-      list.appendChild(h('div', { class: 'row', onClick: () => openEntrySheet(ex, session, upsert, target) }, [
+      list.appendChild(h('div', { class: 'row', onClick: () => openEntry(ex) }, [
         h('div', { class: 'check' + (isDone ? ' done' : (entry?.partial ? ' partial' : '')) }, [icon('check')]),
         h('div', { class: 'row-main' }, [
           h('div', { class: 'row-title' }, [ex.name, entry?.pr ? h('span', { class: 'pr-badge', text: '🏆' }) : null]),

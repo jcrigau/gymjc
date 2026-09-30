@@ -11,6 +11,7 @@ import { planImport, applyImport } from '../utils/import.js';
 import { PLAN_PROFE } from '../data/planProfe.js';
 
 const CHANGELOG = [
+  ['1.13', 'Tres mejoras: (1) los ejercicios por tiempo (plancha, etc.) tienen un cronómetro grande: Iniciar al empezar la serie y Detener al terminarla; marca la serie solo, guarda el tiempo de cada una y avisa con vibración y pitido cuando llegás al objetivo. (2) Al marcar la última serie ya no arranca el descanso, porque lo que sigue es cambiar de ejercicio; en cambio se destaca el botón Guardar. (3) Dentro de cada ejercicio hay un botón "¿No hay máquina?" que muestra los mejores reemplazos y qué hiciste la última vez en cada uno; al elegir uno se abre directo, con las series, repeticiones y descanso que había pedido el profe.'],
   ['1.12', 'Ahora podés marcar las series una por una. Al entrar a un ejercicio aparecen círculos numerados: tocás uno al terminar esa serie y el descanso arranca en ese momento (antes esperaba a que guardaras el ejercicio entero). El progreso se guarda solo, así que si cerrás la app a mitad del ejercicio no perdés nada, y en la lista el ejercicio queda marcado "En curso · 2 de 4 series". Tocando la última marcada la desmarcás, por si te pasaste.'],
   ['1.11', 'Seis mejoras para el gimnasio: (1) temporizador de descanso que arranca solo al guardar, con el tiempo que puso el profe, y avisa con vibración y sonido; (2) la pantalla ya no se apaga durante el entrenamiento; (3) cronómetro de duración que queda guardado en el historial; (4) te avisa cuando hacés un récord de peso 🏆; (5) al cambiar un ejercicio ahora te ofrece primero los equivalentes reales (mismo tipo de movimiento), ideal cuando la máquina está ocupada; (6) tocando la sugerencia o el plan del profe se cargan solos el peso, las series y las repeticiones.'],
   ['1.10', 'Corregido: los "Vuelos laterales" que hacías antes eran pájaros (inclinado, hombro posterior), no elevaciones laterales. Ahora abren la ficha correcta y se agregó la técnica de Pájaros. Las elevaciones laterales del plan nuevo (parado, hombro medio) siguen con su propia ficha, y cada una aclara en qué se diferencian.'],
@@ -257,7 +258,7 @@ export default function SettingsScreen() {
   });
 
   screen.appendChild(h('div', { class: 'list' }, [
-    toggleRow('Temporizador de descanso', 'Arranca solo al guardar un ejercicio', 'restTimer'),
+    toggleRow('Temporizador de descanso', 'Arranca al marcar cada serie (menos la última)', 'restTimer'),
     h('div', { class: 'row' }, [
       h('div', { class: 'row-main' }, [
         h('div', { class: 'row-title', style: 'font-size:16px', text: 'Descanso por defecto' }),

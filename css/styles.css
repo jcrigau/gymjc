@@ -546,6 +546,46 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   color: #fff;
 }
 
+/* ------------------ Cronómetro (ejercicios por tiempo) ------------------- */
+.stopwatch { text-align: center; padding: 20px 14px; margin-bottom: 14px; }
+.sw-time {
+  font-size: 72px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
+}
+.stopwatch.running .sw-time { color: var(--accent); }
+.stopwatch.reached { border-color: var(--green); }
+.stopwatch.reached .sw-time { color: var(--green); }
+.sw-btn { margin-top: 16px; font-size: 19px; padding: 18px 20px; }
+.stopwatch.running .sw-btn { background: var(--red); }
+
+/* ------------------- "¿No hay máquina?" → similares ---------------------- */
+.similar-box { margin-bottom: 12px; }
+.similar-opt {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  transition: transform 0.12s var(--ease);
+}
+.similar-opt:active { transform: scale(0.98); }
+.similar-opt > .ic { color: var(--accent); }
+
+/* Guardar destacado cuando ya no falta ninguna serie */
+.btn-pulse { animation: btn-pulse 1.4s ease-in-out infinite; background: var(--green); }
+@keyframes btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(48, 209, 88, 0); }
+}
+
 /* Ejercicio empezado pero sin cerrar */
 .check.partial { border-color: var(--accent); border-style: dashed; }
 .check.partial .ic { display: none; }
