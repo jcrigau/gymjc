@@ -30,19 +30,38 @@
 
 import { store } from '../store.js';
 import { allExercises, GROUPS, TYPES } from '../data/exercises.js';
+import { ALIASES } from '../data/technique.js';
 
 /** "Jalón al Pecho" -> "jalon al pecho" */
 const norm = (s) => String(s || '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().trim();
 
+/**
+ * Deja el texto listo para leer: lo que llega pegado desde WhatsApp, Notas o
+ * un mail suele traer marca de inicio (BOM), comillas tipográficas en lugar de
+ * rectas, espacios raros, o texto antes y después del bloque.
+ */
+export function cleanText(raw) {
+  let s = String(raw || '')
+    .replace(/^﻿/, '')
+    .replace(/[“”„«»]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[   ]/g, ' ')
+    .replace(/[​-‍⁠]/g, '');
+  const a = s.indexOf('{');
+  const b = s.lastIndexOf('}');
+  if (a >= 0 && b > a) s = s.slice(a, b + 1);
+  return s;
+}
+
 /** Valida el archivo y devuelve un plan de importación, sin escribir nada. */
 export function planImport(json) {
   let data;
   try {
-    data = typeof json === 'string' ? JSON.parse(json) : json;
+    data = typeof json === 'string' ? JSON.parse(cleanText(json)) : json;
   } catch {
-    throw new Error('El archivo no es un JSON válido.');
+    throw new Error('El texto no se pudo leer como rutina. Lo más común es que esté cortado: tiene que estar completo, desde la primera llave { hasta la última }.');
   }
 
   const routines = data && Array.isArray(data.routines) ? data.routines : null;
@@ -53,6 +72,12 @@ export function planImport(json) {
   const library = allExercises();
   const byId = new Map(library.map((e) => [e.id, e]));
   const byName = new Map(library.map((e) => [norm(e.name), e]));
+  // Nombres alternativos conocidos ("Isquiotibiales en máquina" = Curl femoral
+  // sentado): se resuelven al ejercicio real en vez de crear un duplicado.
+  for (const [alias, canon] of Object.entries(ALIASES)) {
+    const target = byName.get(norm(canon));
+    if (target && !byName.has(norm(alias))) byName.set(norm(alias), target);
+  }
   const existingRoutines = new Set(store.routines.map((r) => norm(r.name)));
 
   const toCreate = [];   // ejercicios que no existen y hay que crear

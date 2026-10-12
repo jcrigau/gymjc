@@ -1,0 +1,53 @@
+{
+  "gymjc": "rutinas",
+  "version": 1,
+  "routines": [
+    {
+      "name": "Día A · Hipertrofia",
+      "color": "#0a84ff",
+      "icon": "bolt",
+      "exercises": [
+        { "name": "Rotación externa en polea", "target": { "sets": 2, "reps": "15 por brazo", "repsSeed": 15, "weight": 5, "rpe": 6, "rest": 45, "note": "Preparación de hombro. No hace falta subir el peso." } },
+        { "name": "Prensa de piernas", "target": { "sets": 3, "reps": "10-12", "repsSeed": 10, "weight": 100, "rpe": 8, "rest": 150, "note": "Sumá una repetición por sesión. Con 12 en las 3 series y sin molestia de rodilla, pasá a 110 kg. No bajar más allá de 90° de rodilla." } },
+        { "name": "Press inclinado con mancuernas", "target": { "sets": 4, "reps": "8-12", "repsSeed": 10, "weight": 17.5, "rpe": 8, "rest": 150, "note": "Peso por mano. Sumá una repetición por sesión. Con 12 en las 4 series, pasá a 20 kg y volvé a 8. Codos a 45° del cuerpo." } },
+        { "name": "Jalón al pecho", "target": { "sets": 3, "reps": "8-12", "repsSeed": 8, "weight": 80, "rpe": 8, "rest": 120, "note": "Con 75 kg te sobraba. Con 12 en las 3 series, pasá a 85 kg. Nunca detrás de la nuca." } },
+        { "name": "Curl femoral sentado", "target": { "sets": 3, "reps": "10-15", "repsSeed": 12, "weight": 59, "rpe": 8, "rest": 90, "note": "Reemplaza a la máquina de isquiotibiales donde dolió la rodilla. Con 15 en las 3 series, subí una placa. Si duele atrás de la rodilla, parar." } },
+        { "name": "Extensión en polea (cuerda)", "target": { "sets": 3, "reps": "12-15", "repsSeed": 12, "weight": 35, "rpe": 8, "rest": 75, "note": "Con 15 en las 3 series, pasá a 40 kg y volvé a 12." } },
+        { "name": "Elevaciones laterales", "target": { "sets": 3, "reps": "15-20", "repsSeed": 15, "weight": 5, "rpe": 7, "rest": 60, "note": "SOLO si no duele el hombro. Peso por mano. Hasta el brazo paralelo al piso, un poco hacia adelante. Bajada en 3 s. Con 20 en las 3 series, pasá a 6 kg." } },
+        { "name": "Plancha", "target": { "sets": 2, "reps": "60 s", "secondsSeed": 60, "rest": 45, "note": "No hace falta seguir alargándola." } }
+      ]
+    },
+    {
+      "name": "Día B · Hipertrofia",
+      "color": "#30d158",
+      "icon": "dumbbell",
+      "exercises": [
+        { "name": "Rotación externa en polea", "target": { "sets": 2, "reps": "15 por brazo", "repsSeed": 15, "weight": 5, "rpe": 6, "rest": 45, "note": "Preparación de hombro. No hace falta subir el peso." } },
+        { "name": "Remo en máquina", "target": { "sets": 4, "reps": "8-12", "repsSeed": 10, "weight": 75, "rpe": 8, "rest": 120, "note": "Sumá una repetición por sesión. Con 12 en las 4 series, pasá a 80 kg." } },
+        { "name": "Press inclinado 45° con mancuernas", "target": { "sets": 3, "reps": "10-12", "repsSeed": 10, "weight": 17.5, "rpe": 8, "rest": 120, "note": "Peso por mano. Si molesta el hombro, bajá a 15 kg y no pases de esfuerzo 7. Con 12 en las 3 series sin molestia, pasá a 20 kg." } },
+        { "name": "Prensa de piernas (pies altos)", "group": "Piernas", "type": "Máquina", "description": "Pies altos y anchos en la plataforma: más glúteo e isquiotibiales.", "target": { "sets": 3, "reps": "12-15", "repsSeed": 13, "weight": 100, "rpe": 8, "rest": 120, "note": "Con 15 en las 3 series, pasá a 110 kg. No bajar más allá de 90° de rodilla." } },
+        { "name": "Extensión de cuádriceps", "target": { "sets": 2, "reps": "12-15", "repsSeed": 13, "weight": 59, "rpe": 8, "rest": 75, "note": "Con 15 en las 2 series, pasá a 66 kg. Si molesta la rodilla, se saltea." } },
+        { "name": "Curl con barra Z", "target": { "sets": 3, "reps": "10-12", "repsSeed": 10, "weight": 20, "rpe": 8, "rest": 75, "note": "Sumá una repetición por sesión. Con 12 en las 3 series, pasá a 22,5 kg." } },
+        { "name": "Face pull", "target": { "sets": 3, "reps": "15", "repsSeed": 15, "weight": 30, "rpe": 7, "rest": 60, "note": "Con 15 cómodas en las 3 series, pasá a 35 kg. Techo esfuerzo 7." } },
+        { "name": "Elevación de gemelos en prensa", "target": { "sets": 4, "reps": "12-15", "repsSeed": 13, "weight": 80, "rpe": 8, "rest": 60, "note": "Bajá el talón todo lo posible, pausa de 1 s abajo. Con 15 en las 4 series, pasá a 90 kg." } }
+      ]
+    },
+    {
+      "name": "Día C · Hipertrofia",
+      "color": "#ff9f0a",
+      "icon": "fitness",
+      "exercises": [
+        { "name": "Rotación externa en polea", "target": { "sets": 2, "reps": "15 por brazo", "repsSeed": 15, "weight": 5, "rpe": 6, "rest": 45, "note": "Preparación de hombro. No hace falta subir el peso." } },
+        { "name": "Prensa de piernas", "target": { "sets": 3, "reps": "10-12", "repsSeed": 10, "weight": 100, "rpe": 8, "rest": 150, "note": "Sumá una repetición por sesión. Con 12 en las 3 series y sin molestia de rodilla, pasá a 110 kg. No bajar más allá de 90° de rodilla." } },
+        { "name": "Press inclinado con mancuernas", "target": { "sets": 3, "reps": "8-12", "repsSeed": 10, "weight": 17.5, "rpe": 8, "rest": 150, "note": "Peso por mano. Mismo peso que el Día A: subís a 20 kg cuando llegues a 12 en todas las series." } },
+        { "name": "Cruce de poleas bajo", "target": { "sets": 3, "reps": "12-15", "repsSeed": 12, "rpe": 8, "rest": 75, "note": "De abajo hacia arriba, codos apenas flexionados, sin llevar los brazos más atrás del cuerpo. Elegí un peso que te deje hacer 12 con 2 de reserva. Con 15 en las 3 series, subí una placa. Si hay una sola polea, hacelo de a un brazo." } },
+        { "name": "Remo en polea baja", "target": { "sets": 3, "reps": "10-12", "repsSeed": 10, "weight": 55, "rpe": 8, "rest": 120, "note": "Agarre neutro. Con 12 en las 3 series, pasá a 60 kg." } },
+        { "name": "Curl femoral sentado", "target": { "sets": 3, "reps": "10-15", "repsSeed": 12, "weight": 59, "rpe": 8, "rest": 90, "note": "Con 15 en las 3 series, subí una placa. Si duele atrás de la rodilla, parar." } },
+        { "name": "Curl con mancuernas", "target": { "sets": 3, "reps": "10-12", "repsSeed": 10, "weight": 10, "rpe": 8, "rest": 75, "note": "Peso por mano. Con 12 en las 3 series, pasá a 12,5 kg." } },
+        { "name": "Press francés", "target": { "sets": 3, "reps": "10-12", "repsSeed": 10, "weight": 20, "rpe": 8, "rest": 90, "note": "Con barra Z. Con 12 en las 3 series, pasá a 22,5 kg." } },
+        { "name": "Elevaciones laterales", "target": { "sets": 3, "reps": "15-20", "repsSeed": 15, "weight": 5, "rpe": 7, "rest": 60, "note": "SOLO si no duele el hombro. Peso por mano. Hasta el brazo paralelo al piso, un poco hacia adelante. Bajada en 3 s." } },
+        { "name": "Elevación de gemelos en prensa", "target": { "sets": 3, "reps": "12-15", "repsSeed": 13, "weight": 80, "rpe": 8, "rest": 60, "note": "Mismo peso que el Día B: subís a 90 kg cuando llegues a 15 en todas las series." } }
+      ]
+    }
+  ]
+}
