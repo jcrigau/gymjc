@@ -9,8 +9,10 @@ import { toast } from '../components/toast.js';
 import { buildRows, toCSV, stamp, exportFiles, backupFile, downloadFile, shareOrDownload } from '../utils/export.js';
 import { planImport, applyImport } from '../utils/import.js';
 import { PLAN_PROFE } from '../data/planProfe.js';
+import { planRestore, applyRestore } from '../utils/restore.js';
 
 const CHANGELOG = [
+  ['1.15', 'Protección de datos. (1) Nueva opción "Recuperar historial": lee el CSV que exporta la app y vuelve a cargar los entrenamientos que falten, sin duplicar ni borrar nada; también recrea tus ejercicios propios. (2) "Importar backup" ya no acepta un archivo de rutinas (eso dejaba el historial vacío), avisa cuántos entrenamientos va a reemplazar y pide confirmación. (3) Antes de cualquier reemplazo o reinicio se guarda una copia automática, y aparece "Deshacer el último reemplazo" para volver atrás.'],
   ['1.14', 'Importar rutinas arreglado: el iPhone a veces no dejaba elegir el archivo (lo mostraba en gris). Ahora acepta cualquier archivo y, además, se puede pegar el texto de la rutina directamente, sin archivos. Si algo falla, explica por qué en vez de mostrar un cartel que desaparece. También reconoce nombres alternativos (por ejemplo "Isquiotibiales en máquina" entra como Curl femoral sentado) para no crear ejercicios duplicados.'],
   ['1.13', 'Tres mejoras: (1) los ejercicios por tiempo (plancha, etc.) tienen un cronómetro grande: Iniciar al empezar la serie y Detener al terminarla; marca la serie solo, guarda el tiempo de cada una y avisa con vibración y pitido cuando llegás al objetivo. (2) Al marcar la última serie ya no arranca el descanso, porque lo que sigue es cambiar de ejercicio; en cambio se destaca el botón Guardar. (3) Dentro de cada ejercicio hay un botón "¿No hay máquina?" que muestra los mejores reemplazos y qué hiciste la última vez en cada uno; al elegir uno se abre directo, con las series, repeticiones y descanso que había pedido el profe.'],
   ['1.12', 'Ahora podés marcar las series una por una. Al entrar a un ejercicio aparecen círculos numerados: tocás uno al terminar esa serie y el descanso arranca en ese momento (antes esperaba a que guardaras el ejercicio entero). El progreso se guarda solo, así que si cerrás la app a mitad del ejercicio no perdés nada, y en la lista el ejercicio queda marcado "En curso · 2 de 4 series". Tocando la última marcada la desmarcás, por si te pasaste.'],
@@ -114,7 +116,20 @@ function pickFile(onText) {
   input.click();
 }
 
+/** Hoja simple para avisos que hay que poder leer con calma. */
+function notice(title, message) {
+  openSheet({
+    title,
+    body: (api) => h('div', {}, [
+      h('div', { class: 'card', text: message }),
+      h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => api.close() }, ['Cerrar']),
+    ]),
+  });
+}
+
 function importJSON() {
+  const n = store.history.length;
+  if (n && !confirm(`Esto REEMPLAZA todo lo que hay en la app, incluidos tus ${n} entrenamientos, por el contenido del archivo.\n\nSi querés sumar rutinas, cancelá y usá "Importar rutinas".\n\n¿Seguir?`)) return;
   pickFile((text) => {
     try {
       store.import(text);
@@ -122,10 +137,76 @@ function importJSON() {
       toast('Backup importado', 'success');
       navigate('home');
       location.reload();
-    } catch {
-      toast('Archivo inválido');
+    } catch (err) {
+      notice('No se importó nada', err.message || 'El archivo no es un backup válido. Tus datos quedaron como estaban.');
     }
   });
+}
+
+/** Recupera el historial desde el CSV exportado. Suma, no reemplaza. */
+function restoreHistory() {
+  openSheet({
+    title: 'Recuperar historial',
+    subtitle: 'Desde el CSV de "Exportar historial". Suma lo que falte, no borra nada.',
+    body: (api) => {
+      const area = h('textarea', {
+        class: 'textarea', style: 'min-height:120px;font-size:13px',
+        placeholder: 'O pegá acá el contenido del CSV…',
+      });
+      const seguir = (text) => {
+        if (!String(text || '').trim()) { toast('No hay nada para leer'); return; }
+        let plan;
+        try {
+          plan = planRestore(text);
+        } catch (err) {
+          api.close();
+          setTimeout(() => notice('No se pudo leer', err.message), 360);
+          return;
+        }
+        api.close();
+        setTimeout(() => openSheet({
+          title: 'Recuperar historial',
+          subtitle: `Archivo con ${plan.total} entrenamientos · ${plan.desde} a ${plan.hasta}`,
+          body: (api2) => h('div', {}, [
+            h('div', { class: 'card' }, [
+              h('div', { style: 'font-size:17px;font-weight:700', text: plan.sessions.length
+                ? `Se van a sumar ${plan.sessions.length} entrenamientos (${plan.registros} ejercicios)`
+                : 'No hay nada para sumar' }),
+              plan.yaEstaban ? h('div', { class: 'small muted', style: 'margin-top:4px', text: `${plan.yaEstaban} ya los tenés y no se tocan.` }) : null,
+              plan.customs.length ? h('div', { class: 'small muted', style: 'margin-top:4px', text: `También se vuelven a crear ${plan.customs.length} ejercicios propios: ${plan.customs.map((c) => c.name).join(', ')}.` }) : null,
+            ]),
+            plan.sessions.length ? h('button', {
+              class: 'btn', style: 'margin-top:10px', onClick: () => {
+                const res = applyRestore(plan);
+                api2.close();
+                toast(`${res.sessions} entrenamientos recuperados`, 'success');
+                navigate('history');
+              },
+            }, [icon('check'), 'Recuperar']) : null,
+            h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => api2.close() }, ['Cerrar']),
+          ]),
+        }), 360);
+      };
+
+      return h('div', {}, [
+        h('button', { class: 'btn', onClick: () => pickFile(seguir) }, [icon('upload'), 'Elegir el archivo CSV']),
+        h('div', { style: 'height:14px' }),
+        area,
+        h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => seguir(area.value) }, [icon('check'), 'Leer lo pegado']),
+      ]);
+    },
+  });
+}
+
+/** Vuelve a lo que había antes del último reemplazo o reinicio. */
+function undoReplace() {
+  const copy = store.safetyCopy();
+  if (!copy) return;
+  const cuando = new Date(copy.savedAt).toLocaleString('es');
+  if (!confirm(`Volver a los datos guardados el ${cuando} (${copy.db.history.length} entrenamientos, ${copy.db.routines.length} rutinas)?\n\nLo que hay ahora queda guardado por si querés deshacer esto también.`)) return;
+  store.restoreSafetyCopy();
+  location.hash = '#/home';
+  location.reload();
 }
 
 /** Muestra la vista previa de un plan y lo aplica si el usuario confirma. */
@@ -327,7 +408,9 @@ export default function SettingsScreen() {
     row('target', 'Plan del profe · 8 semanas', 'Lunes A, Miércoles B y Viernes C con peso y series sugeridos', importPlanProfe, '#ffd60a'),
     row('share', 'Exportar historial', 'Compartir o descargar en CSV y JSON', openExportSheet, '#0a84ff'),
     row('add', 'Importar rutinas', 'Sumá rutinas desde un archivo, sin borrar nada', importRoutines, '#30d158'),
+    row('history', 'Recuperar historial', 'Desde un CSV exportado antes. Suma lo que falte', restoreHistory, '#bf5af2'),
     row('upload', 'Importar backup (JSON)', 'Reemplaza TODOS tus datos por los del archivo', importJSON, '#8e8e93'),
+    store.safetyCopy() ? row('restart', 'Deshacer el último reemplazo', 'Vuelve a los datos que había antes', undoReplace, '#ff9f0a') : null,
     row('restart', 'Restablecer datos', 'Borra todo sin posibilidad de deshacer', () => {
       if (confirm('¿Seguro? Se borrarán todas las rutinas y el historial.')) { store.reset(); applyTheme(); location.hash = '#/home'; location.reload(); }
     }, '#ff453a'),

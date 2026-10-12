@@ -151,13 +151,73 @@ export const store = {
 
   // ----------------------------- Backup ---------------------------------
   export() { return JSON.stringify(db, null, 2); },
+  /**
+   * Reemplaza TODA la base por un backup. Antes de pisar nada valida que el
+   * archivo sea de verdad un backup (un archivo de rutinas dejaba el historial
+   * vacío) y guarda una copia de lo que había, para poder deshacer.
+   */
   import(json) {
     const parsed = JSON.parse(json);
-    db = { ...structuredClone(DEFAULT), ...parsed };
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('El archivo no es un backup de GymJC.');
+    }
+    if (parsed.gymjc === 'rutinas') {
+      throw new Error('Este archivo es de RUTINAS, no un backup. Usá "Importar rutinas": las suma sin borrar tu historial.');
+    }
+    if (!Array.isArray(parsed.history) || !Array.isArray(parsed.routines)) {
+      throw new Error('El archivo no es un backup completo de GymJC (le falta el historial o las rutinas).');
+    }
+    this.keepSafetyCopy();
+    db = { ...structuredClone(DEFAULT), ...parsed, settings: { ...DEFAULT.settings, ...(parsed.settings || {}) } };
+    db.history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
     persist();
   },
   reset() {
+    this.keepSafetyCopy();
     db = structuredClone(DEFAULT);
     persist();
+  },
+
+  // Copia de seguridad automática de lo que había antes de un reemplazo.
+  keepSafetyCopy() {
+    try {
+      if (db.history.length || db.routines.length) {
+        localStorage.setItem(KEY + '.prev', JSON.stringify({ savedAt: Date.now(), db }));
+      }
+    } catch { /* sin espacio: se sigue igual */ }
+  },
+  safetyCopy() {
+    try { return JSON.parse(localStorage.getItem(KEY + '.prev')); } catch { return null; }
+  },
+  restoreSafetyCopy() {
+    const copy = this.safetyCopy();
+    if (!copy || !copy.db) return false;
+    const actual = JSON.stringify({ savedAt: Date.now(), db });
+    db = { ...structuredClone(DEFAULT), ...copy.db };
+    persist();
+    localStorage.setItem(KEY + '.prev', actual); // se puede volver a deshacer
+    return true;
+  },
+
+  /** Suma sesiones al historial sin duplicar las que ya están (por id). */
+  mergeSessions(sessions) {
+    const ids = new Set(db.history.map((s) => s.id));
+    let added = 0;
+    for (const s of sessions) {
+      if (ids.has(s.id)) continue;
+      db.history.push(s);
+      ids.add(s.id);
+      added++;
+    }
+    db.history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    persist();
+    return added;
+  },
+  /** Vuelve a crear un ejercicio personalizado conservando su id original. */
+  restoreCustomExercise(ex) {
+    if (db.customExercises.some((e) => e.id === ex.id)) return false;
+    db.customExercises.push({ ...ex, custom: true });
+    persist();
+    return true;
   },
 };
