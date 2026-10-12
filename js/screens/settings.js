@@ -11,7 +11,18 @@ import { planImport, applyImport } from '../utils/import.js';
 import { PLAN_PROFE } from '../data/planProfe.js';
 import { planRestore, applyRestore } from '../utils/restore.js';
 
+// Rutinas que viajan con la app (carpeta _rutinas). Para sumar una nueva:
+// dejar el .json en esa carpeta, agregarla acá y a ASSETS en sw.js.
+const BUNDLED_ROUTINES = [
+  {
+    title: 'Hipertrofia · Día A, B y C',
+    sub: '3 rutinas con peso, series y descanso · 11/10/2026',
+    file: './_rutinas/gymjc-rutinas-2026-10-11.json',
+  },
+];
+
 const CHANGELOG = [
+  ['1.16', 'Las rutinas de Hipertrofia (Día A, B y C) ahora vienen incluidas: en Configuración → Importar rutinas aparecen arriba y se cargan con un toque, sin tener que pasar ningún archivo al teléfono.'],
   ['1.15', 'Protección de datos. (1) Nueva opción "Recuperar historial": lee el CSV que exporta la app y vuelve a cargar los entrenamientos que falten, sin duplicar ni borrar nada; también recrea tus ejercicios propios. (2) "Importar backup" ya no acepta un archivo de rutinas (eso dejaba el historial vacío), avisa cuántos entrenamientos va a reemplazar y pide confirmación. (3) Antes de cualquier reemplazo o reinicio se guarda una copia automática, y aparece "Deshacer el último reemplazo" para volver atrás.'],
   ['1.14', 'Importar rutinas arreglado: el iPhone a veces no dejaba elegir el archivo (lo mostraba en gris). Ahora acepta cualquier archivo y, además, se puede pegar el texto de la rutina directamente, sin archivos. Si algo falla, explica por qué en vez de mostrar un cartel que desaparece. También reconoce nombres alternativos (por ejemplo "Isquiotibiales en máquina" entra como Curl femoral sentado) para no crear ejercicios duplicados.'],
   ['1.13', 'Tres mejoras: (1) los ejercicios por tiempo (plancha, etc.) tienen un cronómetro grande: Iniciar al empezar la serie y Detener al terminarla; marca la serie solo, guarda el tiempo de cada una y avisa con vibración y pitido cuando llegás al objetivo. (2) Al marcar la última serie ya no arranca el descanso, porque lo que sigue es cambiar de ejercicio; en cambio se destaca el botón Guardar. (3) Dentro de cada ejercicio hay un botón "¿No hay máquina?" que muestra los mejores reemplazos y qué hiciste la última vez en cada uno; al elegir uno se abre directo, con las series, repeticiones y descanso que había pedido el profe.'],
@@ -294,8 +305,33 @@ function importRoutines() {
         setTimeout(() => reviewAndImport(text), 360);
       };
 
+      // Rutinas que ya vienen dentro de la app: se cargan con un toque, sin
+      // tener que pasar ningún archivo al teléfono.
+      const cargarIncluida = async (pack) => {
+        try {
+          const res = await fetch(pack.file);
+          if (!res.ok) throw new Error('no disponible');
+          seguir(await res.text());
+        } catch {
+          toast('No se pudo abrir esa rutina. Probá con conexión.');
+        }
+      };
+
       return h('div', {}, [
-        h('button', { class: 'btn', onClick: () => pickFile(seguir) }, [icon('upload'), 'Elegir archivo']),
+        h('div', { class: 'section-title', style: 'margin:0 4px 8px', text: 'Incluidas en la app' }),
+        h('div', { class: 'list' }, BUNDLED_ROUTINES.map((pack) =>
+          h('div', { class: 'row', onClick: () => cargarIncluida(pack) }, [
+            h('div', { class: 'icon-badge', style: 'background:#0a84ff;width:36px;height:36px' }, [icon('dumbbell')]),
+            h('div', { class: 'row-main' }, [
+              h('div', { class: 'row-title', style: 'font-size:16px', text: pack.title }),
+              h('div', { class: 'row-sub', text: pack.sub }),
+            ]),
+            icon('chevron'),
+          ])
+        )),
+
+        h('div', { class: 'section-title', style: 'margin:20px 4px 8px', text: 'Desde un archivo' }),
+        h('button', { class: 'btn secondary', onClick: () => pickFile(seguir) }, [icon('upload'), 'Elegir archivo']),
 
         h('div', { class: 'section-title', style: 'margin:20px 4px 8px', text: 'O pegá el texto' }),
         h('div', { class: 'small muted', style: 'margin:0 4px 8px', text: 'Si el archivo no se deja elegir: abrilo, copiá todo su contenido y pegalo acá.' }),
