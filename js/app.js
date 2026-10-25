@@ -25,7 +25,7 @@ function ReceiveScreen(params) {
   return document.createElement('div');
 }
 
-export const VERSION = '1.21';
+export const VERSION = '1.22';
 
 const SCREENS = {
   home: HomeScreen,

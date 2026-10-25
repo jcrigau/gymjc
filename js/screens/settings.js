@@ -22,7 +22,8 @@ const BUNDLED_ROUTINES = [
 ];
 
 const CHANGELOG = [
-  ['1.21', 'Enviar con código ahora usa un buzón propio (apps.adnsanluis.com/gymjc) en vez de servicios ajenos, que no dejaban que la app los usara desde el teléfono. El código son 6 letras o números, sin distinguir mayúsculas. Todo lo demás igual: el sobre lleva las notas del profe, se entrega una sola vez y vence a los 7 días.'],
+  ['1.22', 'Las pantallas de enviar y recibir con código ya no muestran la dirección del buzón.'],
+  ['1.21', 'Enviar con código ahora usa un buzón propio en vez de servicios ajenos, que no dejaban que la app los usara desde el teléfono. El código son 6 letras o números, sin distinguir mayúsculas. Todo lo demás igual: el sobre lleva las notas del profe, se entrega una sola vez y vence a los 7 días.'],
   ['1.20', 'Enviar rutinas con un código. Al compartir aparece "Enviar con código": escribís tu nombre, la app sube el sobre a un servicio de archivos temporales y te da un código corto (GYM-…) para mandar por WhatsApp. El que recibe lo escribe en Rutinas → Recibir y ve "Rutinas de Juan" con todo, incluidas las notas del profe. El sobre se borra al retirarlo y vence a los 7 días. Si el servicio no responde, queda el link de siempre.'],
   ['1.19', 'Recibir rutinas a distancia, más simple. Al tocar el link que te mandaron se abre una pantalla con un solo botón, "Copiar para la app". Después abrís GymJC desde el ícono y tocás Recibir: la app pega sola lo copiado y te muestra las rutinas. Ya no hay que mantener apretado el mensaje ni pegar a mano.'],
   ['1.18', 'Al recibir rutinas desde un link que se abrió en el navegador (y no en la app instalada), ahora avisa en grande que ese no es tu GymJC, para no importar en el lugar equivocado. El mensaje de WhatsApp indica copiar y pegar en la app en vez de tocar el link.'],

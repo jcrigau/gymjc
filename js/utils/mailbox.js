@@ -21,7 +21,7 @@ const LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 export const BUZON = LOCAL
   ? 'http://127.0.0.1:5095/gymjc/api'
   : 'https://apps.adnsanluis.com/gymjc/api';
-export const BUZON_NOMBRE = LOCAL ? 'el buzón de prueba' : 'tu buzón (apps.adnsanluis.com)';
+export const BUZON_NOMBRE = LOCAL ? 'el buzón de prueba' : 'el buzón de GymJC';
 
 const withTimeout = (p, ms = TIMEOUT_MS) => Promise.race([
   p,
