@@ -415,17 +415,17 @@ export function openReceiveSheet() {
       };
 
       // --- con código ---
-      // Sin autocorrección ni mayúsculas automáticas: en algunos servicios la
-      // clave distingue mayúsculas de minúsculas y hay que escribirla igual.
+      // El código no distingue mayúsculas de minúsculas, así que el teclado
+      // puede poner mayúsculas tranquilo. Sin autocorrección.
       const codeInput = h('input', {
         class: 'input code-input', placeholder: 'GYM-…',
-        autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off', spellcheck: 'false',
+        autocapitalize: 'characters', autocorrect: 'off', autocomplete: 'off', spellcheck: 'false',
       });
       const buscar = () => {
         const t = codeInput.value.trim();
         if (!t) { toast('Escribí el código'); codeInput.focus(); return; }
-        const full = /^gym-/i.test(t) ? 'GYM-' + t.slice(4) : 'GYM-' + t;
-        if (!extractMailCode(full)) { toast('Ese código no tiene la forma GYM-…'); return; }
+        const full = extractMailCode(t) ? t : 'GYM-' + t;
+        if (!extractMailCode(full)) { toast('El código son 6 letras o números, como GYM-K7P3X2'); return; }
         leer(full);
       };
       codeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
@@ -450,7 +450,7 @@ export function openReceiveSheet() {
 
         h('div', { class: 'section-title', style: 'margin:0 4px 8px', text: 'Con código' }),
         codeInput,
-        h('div', { class: 'small muted', style: 'margin:6px 4px 0', text: 'Escribilo igual, con sus mayúsculas y minúsculas. Más fácil: copiá el mensaje de WhatsApp y tocá Recibir.' }),
+        h('div', { class: 'small muted', style: 'margin:6px 4px 0', text: 'Seis letras o números, da igual mayúsculas o minúsculas. Más fácil todavía: copiá el mensaje de WhatsApp y tocá Recibir.' }),
         h('button', { class: 'btn', style: 'margin-top:10px', onClick: buscar }, [icon('check'), 'Buscar el sobre']),
 
         h('div', { class: 'section-title', style: 'margin:20px 4px 8px', text: 'Con QR (cara a cara)' }),
