@@ -11,8 +11,21 @@ import WorkoutScreen from './screens/workout.js';
 import HistoryScreen from './screens/history.js';
 import StatsScreen from './screens/stats.js';
 import SettingsScreen from './screens/settings.js';
+import { receiveCode } from './components/shareRoutines.js';
+import { navigate } from './router.js';
 
-export const VERSION = '1.16';
+// Link de rutinas compartidas (#/recibir/<código>): se pasa a Rutinas y se
+// abre la vista previa para importarlas.
+function ReceiveScreen(params) {
+  const code = params[0];
+  setTimeout(() => {
+    navigate('routines');
+    setTimeout(() => receiveCode('#/recibir/' + code), 450);
+  }, 0);
+  return document.createElement('div');
+}
+
+export const VERSION = '1.17';
 
 const SCREENS = {
   home: HomeScreen,
@@ -22,6 +35,7 @@ const SCREENS = {
   history: HistoryScreen,
   stats: StatsScreen,
   settings: SettingsScreen,
+  recibir: ReceiveScreen,
 };
 
 // Pestañas que muestran la barra inferior (las secundarias como "workout" no).

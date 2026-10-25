@@ -1,0 +1,9 @@
+Librerias de terceros incluidas en GymJC (sin cambios, copiadas tal cual):
+
+qrcode.js  - QR Code Generator for JavaScript 1.4.4, (c) 2009 Kazuhiko Arase.
+             Licencia MIT. https://github.com/kazuhikoarase/qrcode-generator
+jsQR.js    - jsQR 1.4.0, (c) Cosmo Wolfe. Licencia Apache 2.0.
+             https://github.com/cozmo/jsQR
+
+Se cargan solo cuando hacen falta (al compartir o al escanear) y quedan en el
+cache offline del service worker.

@@ -7,7 +7,7 @@ import { applyTheme, VERSION } from '../app.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { buildRows, toCSV, stamp, exportFiles, backupFile, downloadFile, shareOrDownload } from '../utils/export.js';
-import { planImport, applyImport } from '../utils/import.js';
+import { reviewAndImport } from '../components/importReview.js';
 import { PLAN_PROFE } from '../data/planProfe.js';
 import { planRestore, applyRestore } from '../utils/restore.js';
 
@@ -22,6 +22,7 @@ const BUNDLED_ROUTINES = [
 ];
 
 const CHANGELOG = [
+  ['1.17', 'Compartir rutinas con otras personas. En Rutinas hay dos botones nuevos: "Compartir" (una rutina se pasa por QR o link; varias juntas, por link de WhatsApp o mail) y "Recibir" (escaneás el QR con la cámara desde la app, o pegás el link). Viajan con el peso, series, repeticiones y descanso, y también los ejercicios propios. Funciona sin internet.'],
   ['1.16', 'Las rutinas de Hipertrofia (Día A, B y C) ahora vienen incluidas: en Configuración → Importar rutinas aparecen arriba y se cargan con un toque, sin tener que pasar ningún archivo al teléfono.'],
   ['1.15', 'Protección de datos. (1) Nueva opción "Recuperar historial": lee el CSV que exporta la app y vuelve a cargar los entrenamientos que falten, sin duplicar ni borrar nada; también recrea tus ejercicios propios. (2) "Importar backup" ya no acepta un archivo de rutinas (eso dejaba el historial vacío), avisa cuántos entrenamientos va a reemplazar y pide confirmación. (3) Antes de cualquier reemplazo o reinicio se guarda una copia automática, y aparece "Deshacer el último reemplazo" para volver atrás.'],
   ['1.14', 'Importar rutinas arreglado: el iPhone a veces no dejaba elegir el archivo (lo mostraba en gris). Ahora acepta cualquier archivo y, además, se puede pegar el texto de la rutina directamente, sin archivos. Si algo falla, explica por qué en vez de mostrar un cartel que desaparece. También reconoce nombres alternativos (por ejemplo "Isquiotibiales en máquina" entra como Curl femoral sentado) para no crear ejercicios duplicados.'],
@@ -218,75 +219,6 @@ function undoReplace() {
   store.restoreSafetyCopy();
   location.hash = '#/home';
   location.reload();
-}
-
-/** Muestra la vista previa de un plan y lo aplica si el usuario confirma. */
-function reviewAndImport(text, { title = 'Importar rutinas', subtitleExtra = '' } = {}) {
-  let planned;
-  try {
-    planned = planImport(text);
-  } catch (err) {
-    // En una hoja y no en un cartelito de 2 segundos: si falla, hay que
-    // poder leer por qué.
-    openSheet({
-      title: 'No se pudo importar',
-      body: (api) => h('div', {}, [
-        h('div', { class: 'card', text: err.message || 'El archivo no es válido.' }),
-        h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => api.close() }, ['Cerrar']),
-      ]),
-    });
-    return;
-  }
-
-  const { plan, toCreate, warnings } = planned;
-
-  openSheet({
-    title,
-    subtitle: `${plan.length} rutina${plan.length > 1 ? 's' : ''} · ${toCreate.length} ejercicio${toCreate.length === 1 ? '' : 's'} nuevo${toCreate.length === 1 ? '' : 's'}${subtitleExtra}`,
-    body: (api) => h('div', {}, [
-      h('div', { class: 'card' }, [
-        h('div', { class: 'small muted', text: 'Se suman a tus rutinas actuales. No se toca el historial ni se borra nada.' }),
-      ]),
-
-      ...plan.map((r) => h('div', { class: 'card' }, [
-        h('div', { style: 'font-weight:700;margin-bottom:6px', text: r.name }),
-        ...r.items.map((it) => {
-          const base = it.status === 'nuevo'
-            ? `+ ${it.pending.name} · ${it.pending.group} · nuevo`
-            : `• ${it.exercise.name} · ${it.exercise.group}`;
-          const t = it.target;
-          const tParts = t ? [
-            t.weight != null ? `${String(t.weight).replace('.', ',')} kg` : null,
-            t.sets && t.reps ? `${t.sets}×${t.reps}` : null,
-            t.rpe ? `RPE ${t.rpe}` : null,
-          ].filter(Boolean).join(' · ') : '';
-          return h('div', {}, [
-            h('div', { class: 'small muted', text: base }),
-            tParts ? h('div', { class: 'small', style: 'color:var(--accent);margin:1px 0 6px', text: `  🎯 ${tParts}` }) : null,
-          ]);
-        }),
-      ])),
-
-      warnings.length ? h('div', { class: 'card' }, [
-        h('div', { style: 'font-weight:700;margin-bottom:6px', text: 'Avisos' }),
-        ...warnings.map((w) => h('div', { class: 'small muted', text: w })),
-      ]) : null,
-
-      h('button', {
-        class: 'btn', style: 'margin-top:10px', onClick: () => {
-          try {
-            const res = applyImport(planned);
-            api.close();
-            toast(`${res.routines} rutina${res.routines > 1 ? 's' : ''} importada${res.routines > 1 ? 's' : ''}`, 'success');
-            navigate('routines');
-          } catch {
-            toast('No se pudo importar');
-          }
-        },
-      }, [icon('check'), 'Importar']),
-      h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => api.close() }, ['Cancelar']),
-    ]),
-  });
 }
 
 /** Importa rutinas: desde un archivo o pegando el texto. */

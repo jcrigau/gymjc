@@ -7,6 +7,7 @@ import { navigate } from '../router.js';
 import { openSheet } from '../components/sheet.js';
 import { openExercisePicker } from './library.js';
 import { toast } from '../components/toast.js';
+import { openShareSheet, openReceiveSheet, shareOne } from '../components/shareRoutines.js';
 
 const COLORS = ['#0a84ff', '#30d158', '#ff453a', '#ff9f0a', '#bf5af2', '#ff375f', '#64d2ff', '#ffd60a'];
 const ICONS = ['dumbbell', 'fitness', 'bolt', 'target', 'timer', 'play'];
@@ -146,6 +147,7 @@ function openActions(r, onChange) {
     body: (api) => h('div', { class: 'vstack' }, [
       h('button', { class: 'btn', onClick: () => { api.close(); navigate('workout/' + r.id); } }, [icon('play'), 'Comenzar']),
       h('button', { class: 'btn secondary', onClick: () => { api.close(); openEditor(r, onChange); } }, [icon('edit'), 'Editar']),
+      h('button', { class: 'btn secondary', onClick: () => { api.close(); setTimeout(() => shareOne(r), 360); } }, [icon('qr'), 'Compartir por QR']),
       h('button', { class: 'btn secondary', onClick: () => { store.duplicateRoutine(r.id); api.close(); onChange(); toast('Rutina duplicada', 'success'); } }, [icon('copy'), 'Duplicar']),
       h('button', { class: 'btn danger', onClick: () => { if (confirm(`¿Eliminar "${r.name}"?`)) { store.deleteRoutine(r.id); api.close(); onChange(); toast('Rutina eliminada'); } } }, [icon('delete'), 'Eliminar']),
     ]),
@@ -158,6 +160,13 @@ export default function RoutinesScreen() {
   screen.appendChild(h('div', { class: 'header' }, [
     h('h1', { text: 'Rutinas' }),
     h('button', { class: 'icon-btn plain', onClick: () => openEditor(null, rerenderList), 'aria-label': 'Nueva' }, [icon('add')]),
+  ]));
+
+  // Compartir / recibir: a la vista, porque es como se pasan rutinas entre
+  // personas del mismo gimnasio.
+  screen.appendChild(h('div', { class: 'grid-2', style: 'margin-bottom:14px' }, [
+    h('button', { class: 'btn secondary', onClick: () => openShareSheet() }, [icon('qr'), 'Compartir']),
+    h('button', { class: 'btn secondary', onClick: openReceiveSheet }, [icon('camera'), 'Recibir']),
   ]));
 
   const list = h('div', { class: 'list' });
