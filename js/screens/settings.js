@@ -10,6 +10,7 @@ import { buildRows, toCSV, stamp, exportFiles, backupFile, downloadFile, shareOr
 import { reviewAndImport } from '../components/importReview.js';
 import { PLAN_PROFE } from '../data/planProfe.js';
 import { planRestore, applyRestore } from '../utils/restore.js';
+import { openMissingSheets, missingSheets } from '../components/missingSheets.js';
 
 // Rutinas que viajan con la app (carpeta _rutinas). Para sumar una nueva:
 // dejar el .json en esa carpeta, agregarla acá y a ASSETS en sw.js.
@@ -22,6 +23,7 @@ const BUNDLED_ROUTINES = [
 ];
 
 const CHANGELOG = [
+  ['1.23', 'Los 162 ejercicios de la biblioteca tienen su "Cómo se hace" (antes eran 39). Al crear un ejercicio, la app avisa si ya existe con otro nombre (estocadas = zancadas, mariposa = pec deck, pantorrillas = gemelos…) y te deja usar el existente con tu nombre. Cualquier ejercicio se puede renombrar solo para vos, y uno creado a mano se puede unir con el de la biblioteca que es el mismo, con todo su historial. Ajustes → Ejercicios sin ficha arma la lista para mandar. Progreso nuevo: elegís el período y lo compara con el anterior, entrenamientos por semana, racha, series por grupo muscular, récords, ejercicios estancados o al límite, fuerza estimada y últimas veces con notas. Y el botón Informe para el profe arma un resumen listo para WhatsApp.'],
   ['1.22', 'Las pantallas de enviar y recibir con código ya no muestran la dirección del buzón.'],
   ['1.21', 'Enviar con código ahora usa un buzón propio en vez de servicios ajenos, que no dejaban que la app los usara desde el teléfono. El código son 6 letras o números, sin distinguir mayúsculas. Todo lo demás igual: el sobre lleva las notas del profe, se entrega una sola vez y vence a los 7 días.'],
   ['1.20', 'Enviar rutinas con un código. Al compartir aparece "Enviar con código": escribís tu nombre, la app sube el sobre a un servicio de archivos temporales y te da un código corto (GYM-…) para mandar por WhatsApp. El que recibe lo escribe en Rutinas → Recibir y ve "Rutinas de Juan" con todo, incluidas las notas del profe. El sobre se borra al retirarlo y vence a los 7 días. Si el servicio no responde, queda el link de siempre.'],
@@ -373,6 +375,15 @@ export default function SettingsScreen() {
       restInput,
     ]),
     toggleRow('Pantalla siempre encendida', 'Durante el entrenamiento, para no desbloquear entre series', 'keepAwake'),
+  ]));
+
+  // Ejercicios
+  const sinFicha = missingSheets().length;
+  screen.appendChild(h('div', { class: 'section-title', text: 'Ejercicios' }));
+  screen.appendChild(h('div', { class: 'list' }, [
+    row('info', 'Ejercicios sin ficha',
+      sinFicha ? `${sinFicha} creado${sinFicha > 1 ? 's' : ''} por vos sin "Cómo se hace". Mandá la lista para sumarlos` : 'Todos tienen su "Cómo se hace"',
+      () => openMissingSheets(), sinFicha ? '#ff9f0a' : '#30d158'),
   ]));
 
   // Datos

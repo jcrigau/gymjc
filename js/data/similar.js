@@ -67,7 +67,7 @@ export function movementPattern(ex) {
   const key = ex.id || ex.name;
   if (cache.has(key)) return cache.get(key);
 
-  const name = norm(ex.name);
+  const name = norm(ex.baseName || ex.name);
   let found = null;
   for (const [pattern, re, groups] of RULES) {
     if (groups && !groups.includes(ex.group)) continue;

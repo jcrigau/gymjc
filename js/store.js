@@ -17,6 +17,7 @@ const DEFAULT = {
     restTimer: true,   // arrancar el descanso solo al guardar un ejercicio
     defaultRest: 90,   // segundos, cuando la rutina no trae el dato del profe
     keepAwake: true,   // pantalla encendida durante el entrenamiento
+    nicknames: {},     // id de la biblioteca -> nombre propio del usuario
   },
 };
 
@@ -91,6 +92,64 @@ export const store = {
   deleteCustomExercise(id) {
     db.customExercises = db.customExercises.filter((e) => e.id !== id);
     persist();
+  },
+  /** Cambia el nombre de un ejercicio creado a mano. */
+  renameCustomExercise(id, name) {
+    const ex = db.customExercises.find((e) => e.id === id);
+    if (!ex || !name) return false;
+    ex.name = name;
+    persist();
+    return true;
+  },
+
+  // ------------------------------- Apodos -------------------------------
+  // Nombre propio para un ejercicio de la biblioteca ("Mariposa" en vez de
+  // "Pec deck"). Solo cambia cómo se ve en ESTE teléfono: por abajo sigue
+  // siendo el mismo ejercicio, con su ficha, sus similares y su historial.
+  nickname(id) { return (db.settings.nicknames || {})[id] || ''; },
+  setNickname(id, name) {
+    if (!db.settings.nicknames) db.settings.nicknames = {};
+    const n = String(name || '').trim();
+    if (n) db.settings.nicknames[id] = n;
+    else delete db.settings.nicknames[id];
+    persist();
+  },
+
+  /**
+   * "Es el mismo ejercicio": pasa todo lo del ejercicio `fromId` (uno creado a
+   * mano) a `toId` — historial, rutinas, metas del profe y favoritos — y borra
+   * el duplicado. Guarda antes una copia para poder deshacer desde Ajustes.
+   * Devuelve cuántos registros del historial se pasaron.
+   */
+  mergeExercise(fromId, toId) {
+    if (!fromId || !toId || fromId === toId) return 0;
+    this.keepSafetyCopy();
+    let moved = 0;
+    for (const s of db.history) {
+      for (const e of s.entries || []) {
+        if (e.exerciseId === fromId) { e.exerciseId = toId; moved++; }
+      }
+    }
+    for (const r of db.routines) {
+      if (!Array.isArray(r.exercises) || !r.exercises.includes(fromId)) continue;
+      r.exercises = r.exercises.includes(toId)
+        ? r.exercises.filter((id) => id !== fromId)
+        : r.exercises.map((id) => (id === fromId ? toId : id));
+      if (r.targets && r.targets[fromId]) {
+        if (!r.targets[toId]) r.targets[toId] = r.targets[fromId];
+        delete r.targets[fromId];
+      }
+    }
+    if (db.favorites.includes(fromId)) {
+      db.favorites = db.favorites.filter((x) => x !== fromId);
+      if (!db.favorites.includes(toId)) db.favorites.push(toId);
+    }
+    const ov = db.settings.cargaOverrides || {};
+    if (ov[fromId] && !ov[toId]) ov[toId] = ov[fromId];
+    delete ov[fromId];
+    db.customExercises = db.customExercises.filter((e) => e.id !== fromId);
+    persist();
+    return moved;
   },
 
   // ----------------------------- Favoritos ------------------------------

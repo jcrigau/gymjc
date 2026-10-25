@@ -72,6 +72,8 @@ export function planImport(json) {
   const library = allExercises();
   const byId = new Map(library.map((e) => [e.id, e]));
   const byName = new Map(library.map((e) => [norm(e.name), e]));
+  // Con apodo, el nombre original de la biblioteca también vale.
+  for (const e of library) if (e.baseName && !byName.has(norm(e.baseName))) byName.set(norm(e.baseName), e);
   // Nombres alternativos conocidos ("Isquiotibiales en máquina" = Curl femoral
   // sentado): se resuelven al ejercicio real en vez de crear un duplicado.
   for (const [alias, canon] of Object.entries(ALIASES)) {

@@ -87,7 +87,7 @@ export function lineChart(points, { height = 200, color, fmt = (v) => v } = {}) 
 }
 
 /** Gráfico de barras. points: [{ label, value }]. */
-export function barChart(points, { height = 200, color } = {}) {
+export function barChart(points, { height = 200, color, showValues = false, valueFmt = (v) => String(v) } = {}) {
   const wrap = h('div', { class: 'chart-wrap' });
   const accent = color || css('--accent');
 
@@ -107,6 +107,8 @@ export function barChart(points, { height = 200, color } = {}) {
     ctx.fillStyle = css('--text-3') || '#888';
     ctx.font = '10px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'center';
+    // Con muchas barras, una etiqueta cada tanto para que no se encimen.
+    const every = Math.ceil(n / 8);
 
     points.forEach((p, i) => {
       const x = pad + step * i + step / 2;
@@ -118,7 +120,12 @@ export function barChart(points, { height = 200, color } = {}) {
       ctx.roundRect(x - bw / 2, y, bw, bh, [r, r, 0, 0]);
       ctx.fill();
       ctx.fillStyle = css('--text-3') || '#888';
-      ctx.fillText(p.label, x, height - 8);
+      if (i % every === 0 || i === n - 1) ctx.fillText(p.label, x, height - 8);
+      // Valor arriba de la barra cuando entran.
+      if (showValues && p.value > 0 && n <= 14) {
+        ctx.fillStyle = css('--text-2') || '#aaa';
+        ctx.fillText(valueFmt(p.value), x, y - 4);
+      }
     });
   };
 

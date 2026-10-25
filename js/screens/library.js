@@ -8,6 +8,8 @@ import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
 import { fmtEntry } from '../utils/format.js';
 import { openTechniqueSheet, hasTechnique } from '../components/techniqueSheet.js';
+import { lookalikeBox, useExisting, openRenameSheet, openMergeFlow, confirmMerge } from '../components/exerciseNames.js';
+import { findLookalikes } from '../utils/lookalike.js';
 
 function norm(s) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -23,7 +25,7 @@ function exerciseRow(ex, { onClick, trailing } = {}) {
     typeBadge(ex),
     h('div', { class: 'row-main' }, [
       h('div', { class: 'row-title', text: ex.name }),
-      h('div', { class: 'row-sub', text: `${ex.group} · ${ex.type}` }),
+      h('div', { class: 'row-sub', text: [ex.group, ex.type, ex.baseName ? `= ${ex.baseName}` : ''].filter(Boolean).join(' · ') }),
     ]),
     trailing || icon('chevron'),
   ]);
@@ -35,23 +37,42 @@ function filterExercises({ query, group, favsOnly }) {
   return allExercises().filter((ex) => {
     if (favsOnly && !store.isFav(ex.id)) return false;
     if (group && group !== 'Favoritos' && ex.group !== group) return false;
-    if (q && !norm(ex.name).includes(q)) return false;
+    // Con apodo, se encuentra por los dos nombres.
+    if (q && !norm(ex.name).includes(q) && !norm(ex.baseName || '').includes(q)) return false;
     return true;
   });
 }
 
 function openExerciseDetail(ex, onChange) {
+  // Un ejercicio creado a mano que se parece mucho a uno de la biblioteca:
+  // se ofrece unirlos ahí mismo.
+  const gemelo = ex.custom
+    ? findLookalikes(ex.name, { group: ex.group, excludeId: ex.id, min: 0.75, limit: 1 }).find((m) => !m.exercise.custom)
+    : null;
   openSheet({
     title: ex.name,
-    subtitle: `${ex.group} · ${ex.type}`,
+    subtitle: [ex.group, ex.type, ex.baseName ? `en la biblioteca: ${ex.baseName}` : '', ex.custom ? 'creado por vos' : '']
+      .filter(Boolean).join(' · '),
     body: (api) => {
       const last = store.lastEntry(ex.id);
+      const ficha = hasTechnique(ex);
       return h('div', {}, [
+        gemelo ? h('div', { class: 'card', style: 'border-color:var(--orange);margin-bottom:10px' }, [
+          h('div', { style: 'font-weight:700', text: `¿Es el mismo que "${gemelo.exercise.name}"?` }),
+          h('div', { class: 'small muted', style: 'margin:2px 0 8px', text: 'Si los unís, el historial queda junto y ganás la ficha de "Cómo se hace" y los similares.' }),
+          h('button', {
+            class: 'btn secondary',
+            onClick: () => { api.close(); confirmMerge(ex, gemelo.exercise, onChange); },
+          }, [icon('swap'), 'Unirlos']),
+        ]) : null,
         h('div', { class: 'card', text: ex.description || 'Sin descripción.' }),
-        hasTechnique(ex) ? h('button', {
+        ficha ? h('button', {
           class: 'btn secondary', style: 'margin-top:10px',
           onClick: () => openTechniqueSheet(ex),
-        }, [icon('info'), 'Cómo se hace']) : null,
+        }, [icon('info'), 'Cómo se hace']) : h('div', {
+          class: 'small muted', style: 'margin:8px 4px 0',
+          text: 'Todavía sin ficha de "Cómo se hace". Figura en Ajustes → Ejercicios sin ficha, para sumarla en una próxima versión.',
+        }),
         last ? h('div', { class: 'card mt' }, [
           h('div', { class: 'small muted', text: 'Última vez' }),
           h('div', { style: 'font-size:17px;font-weight:600;margin-top:2px', text: fmtEntry(last) }),
@@ -66,6 +87,18 @@ function openExerciseDetail(ex, onChange) {
           }, CARGA_OPTIONS.map((o) => h('option', { value: o.value, text: o.label, selected: ex.carga === o.value ? '' : null }))),
         ]),
         h('div', { class: 'grid-2 mt' }, [
+          h('button', {
+            class: 'btn secondary',
+            onClick: () => { api.close(); openRenameSheet(ex, onChange); },
+          }, [icon('edit'), 'Cambiar nombre']),
+          ex.custom
+            ? h('button', {
+              class: 'btn secondary',
+              onClick: () => { api.close(); openMergeFlow(ex, { onChange, openPicker: openExercisePicker }); },
+            }, [icon('swap'), 'Es el mismo que…'])
+            : h('div'),
+        ]),
+        h('div', { class: 'grid-2', style: 'margin-top:10px' }, [
           h('button', {
             class: 'btn secondary',
             onClick: () => { store.toggleFav(ex.id); hapticTap(); api.close(); onChange && onChange(); },
@@ -89,6 +122,11 @@ function openAddCustom(onChange) {
       const type = h('select', { class: 'input' }, TYPES.map((t) => h('option', { value: t, text: t })));
       const carga = h('select', { class: 'input' }, CARGA_OPTIONS.map((o) => h('option', { value: o.value, text: o.label })));
       const desc = h('textarea', { class: 'textarea', placeholder: 'Descripción (opcional)' });
+      // Mientras escribe, se buscan parecidos en la biblioteca.
+      const parecidos = lookalikeBox(name, group, (ex) => {
+        api.close();
+        useExisting(ex, name.value, { onDone: () => onChange && onChange() });
+      });
 
       // Ejercicios isométricos o de cardio: se registran por segundos, no por reps.
       const timed = h('input', { type: 'checkbox', style: 'width:22px;height:22px;flex-shrink:0' });
@@ -106,6 +144,7 @@ function openAddCustom(onChange) {
       return h('div', {}, [
         h('div', { class: 'field' }, [h('label', { text: 'Nombre' }), name]),
         h('div', { class: 'field' }, [h('label', { text: 'Grupo muscular' }), group]),
+        parecidos.node,
         h('div', { class: 'field' }, [h('label', { text: 'Tipo' }), type]),
         h('div', { class: 'field' }, [h('label', { text: 'Cómo cuenta el peso' }), carga]),
         timedField,
@@ -113,6 +152,9 @@ function openAddCustom(onChange) {
         h('button', {
           class: 'btn', onClick: () => {
             if (!name.value.trim()) { toast('Escribí un nombre'); return; }
+            parecidos.update();
+            const fuerte = parecidos.strongest();
+            if (fuerte && !confirm(`Se parece mucho a "${fuerte.exercise.name}", que ya tenés. ¿Crear otro igual de todas formas?`)) return;
             store.addCustomExercise({ name: name.value.trim(), group: group.value, type: type.value, description: desc.value.trim(), timed: timed.checked, carga: carga.value });
             api.close(); onChange && onChange(); toast('Ejercicio agregado', 'success');
           },

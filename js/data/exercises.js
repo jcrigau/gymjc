@@ -254,10 +254,15 @@ export const BASE_EXERCISES = Object.entries(RAW).flatMap(([group, list]) =>
 
 export const groupMeta = (id) => GROUPS.find((g) => g.id === id) || GROUPS[0];
 
-// Aplica la corrección de convención que el usuario haya fijado a mano.
+// Aplica lo que el usuario fijó a mano: la convención de carga y el apodo.
+// Con apodo, `name` es el apodo y `baseName` el nombre de la biblioteca (la
+// ficha de técnica y los similares se buscan por `baseName`).
 function withOverride(ex) {
   const ov = store.settings.cargaOverrides;
-  return ov && ov[ex.id] ? { ...ex, carga: ov[ex.id] } : ex;
+  let out = ov && ov[ex.id] ? { ...ex, carga: ov[ex.id] } : ex;
+  const nick = !ex.custom && store.settings.nicknames && store.settings.nicknames[ex.id];
+  if (nick && nick !== ex.name) out = { ...out, name: nick, baseName: ex.name };
+  return out;
 }
 
 /** Biblioteca completa: base + personalizados del usuario, con overrides. */

@@ -1,5 +1,5 @@
 // Service Worker de GymJC — cachea todo para funcionar 100% offline.
-const CACHE = 'gymjc-v1.22';
+const CACHE = 'gymjc-v1.23';
 
 // Todos los recursos de la app (app shell). Al ser rutas relativas
 // funciona igual en GitHub Pages dentro de un subdirectorio.
@@ -25,6 +25,14 @@ const ASSETS = [
   './js/utils/restore.js',
   './js/utils/share.js',
   './js/utils/mailbox.js',
+  './js/utils/lookalike.js',
+  './js/utils/sendText.js',
+  './js/utils/progress.js',
+  './js/data/techniqueMas1.js',
+  './js/data/techniqueMas2.js',
+  './js/components/exerciseNames.js',
+  './js/components/missingSheets.js',
+  './js/components/coachReport.js',
   './js/vendor/qrcode.js',
   './js/vendor/jsQR.js',
   './js/components/nav.js',

@@ -2,9 +2,10 @@
 // comunes y músculos que trabaja.
 //
 // ┌─ CÓMO MANTENER ESTE ARCHIVO ────────────────────────────────────────────┐
-// │ Solo están los ejercicios que el usuario USA o USÓ alguna vez (los de   │
-// │ su historial + los de las rutinas del plan). No están los 162 de la     │
-// │ biblioteca: se agregan a medida que se incorporan a una rutina.         │
+// │ Desde la 1.23 están los 162 de la biblioteca: acá los que el usuario    │
+// │ usa, y el resto en techniqueMas1.js / techniqueMas2.js (mismo formato). │
+// │ Los ejercicios creados a mano se suman a medida que aparecen (Ajustes → │
+// │ "Ejercicios sin ficha" arma la lista para pasarla).                     │
 // │                                                                         │
 // │ Para agregar uno nuevo:                                                 │
 // │   1. Agregá una entrada en TECHNIQUE con la clave = nombre normalizado  │
@@ -21,6 +22,9 @@
 // └─────────────────────────────────────────────────────────────────────────┘
 
 /** "Jalón al Pecho" -> "jalon al pecho" */
+import { TECHNIQUE_MAS_1 } from './techniqueMas1.js';
+import { TECHNIQUE_MAS_2 } from './techniqueMas2.js';
+
 export const normName = (s) => String(s || '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().trim();
@@ -582,9 +586,24 @@ export const TECHNIQUE = {
   },
 };
 
-/** Devuelve la técnica de un ejercicio buscando por nombre (y alias). */
+// El resto de la biblioteca (agregado en la 1.23, para que los 162 tengan ficha).
+Object.assign(TECHNIQUE, TECHNIQUE_MAS_1, TECHNIQUE_MAS_2);
+
+/**
+ * Devuelve la técnica de un ejercicio buscando por nombre (y alias).
+ * Usa el nombre de la biblioteca aunque el usuario le haya puesto un apodo.
+ * Si dos ejercicios de grupos distintos se llaman igual ("Press en máquina"
+ * de pecho y de hombros), la clave "nombre|Grupo" desempata.
+ */
 export function techniqueFor(exercise) {
   if (!exercise || !exercise.name) return null;
-  const key = normName(exercise.name);
-  return TECHNIQUE[key] || TECHNIQUE[ALIASES[key]] || null;
+  for (const n of [exercise.baseName, exercise.name]) {
+    if (!n) continue;
+    const key = normName(n);
+    const canon = ALIASES[key];
+    const t = TECHNIQUE[`${key}|${exercise.group}`] || TECHNIQUE[key]
+      || (canon && (TECHNIQUE[`${canon}|${exercise.group}`] || TECHNIQUE[canon]));
+    if (t) return t;
+  }
+  return null;
 }

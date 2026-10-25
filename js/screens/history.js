@@ -11,16 +11,20 @@ const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 function norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
+// Nombre con el que se ve hoy el ejercicio (apodo, unión de duplicados); si
+// ya no existe, el que tenía cuando se registró.
+const entryName = (e) => exerciseById(e.exerciseId)?.name || e.name;
+
 function sessionMatches(s, q) {
   if (!q) return true;
   const nq = norm(q);
   if (norm(s.routineName).includes(nq)) return true;
-  return (s.entries || []).some((e) => norm(e.name).includes(nq));
+  return (s.entries || []).some((e) => norm(e.name).includes(nq) || norm(entryName(e)).includes(nq));
 }
 
 function editEntrySheet(session, entry, onChange) {
   openSheet({
-    title: entry.name,
+    title: entryName(entry),
     subtitle: 'Editar registro',
     body: (api) => {
       const wrap = h('div', {});
@@ -85,7 +89,7 @@ function sessionDetail(session, onChange) {
         session.entries.forEach((e) => {
           list.appendChild(h('div', { class: 'row', onClick: () => editEntrySheet(session, e, () => { renderEntries(); onChange(); }) }, [
             h('div', { class: 'row-main' }, [
-              h('div', { class: 'row-title', text: e.name }),
+              h('div', { class: 'row-title', text: entryName(e) }),
               h('div', { class: 'row-sub', text: fmtEntry(e) + (e.notes ? ` · ${e.notes}` : '') }),
             ]),
             icon('edit'),
