@@ -152,7 +152,7 @@ async function showShareResult(routines) {
 
       h('button', {
         class: 'btn', onClick: async () => {
-          const text = `Te paso ${routines.length > 1 ? 'mis rutinas' : 'mi rutina'} de GymJC (${names}). Abrí GymJC → Rutinas → Recibir → Pegar, y pegá este link:\n${link}`;
+          const text = `Te paso ${routines.length > 1 ? 'mis rutinas' : 'mi rutina'} de GymJC (${names}). NO toques el link: copiá este mensaje, abrí GymJC desde su ícono → Rutinas → Recibir → Pegar.\n${link}`;
           if (navigator.share) {
             try { await navigator.share({ title: 'Rutinas GymJC', text }); return; } catch (e) { if (e?.name === 'AbortError') return; }
           }
@@ -197,13 +197,18 @@ export async function receiveCode(raw, { fromScan = false } = {}) {
     return;
   }
 
-  // iPhone abriendo el link en Safari: avisar que no es la app instalada.
+  // Abierto fuera de la app instalada (Safari, navegador de WhatsApp…):
+  // esos navegadores tienen su propio GymJC, aparte del de la app. Si además
+  // está vacío, casi seguro no es la app de la persona: avisar fuerte.
   let before = null;
-  if (isIOS() && !isInstalled()) {
+  const vacia = !store.routines.length && !store.history.length;
+  if (!isInstalled() && (isIOS() || vacia)) {
     const link = shareLink(code);
     before = h('div', { class: 'card', style: 'border-color:var(--orange)' }, [
-      h('div', { style: 'font-weight:700;margin-bottom:4px', text: '⚠️ Estás en Safari, no en la app' }),
-      h('div', { class: 'small', text: 'Si usás GymJC desde el ícono del inicio, sus datos están separados. Copiá el link, abrí la app y andá a Rutinas → Recibir → Pegar.' }),
+      h('div', { style: 'font-weight:700;margin-bottom:4px', text: '⚠️ Esto se abrió en el navegador, no en tu app' }),
+      h('div', { class: 'small', text: vacia
+        ? 'Acá no hay ninguna rutina ni entrenamiento tuyo: este no es el GymJC que usás. NO importes acá. Copiá el link, abrí GymJC desde el ícono del inicio y andá a Rutinas → Recibir → Pegar.'
+        : 'Si usás GymJC desde el ícono del inicio, sus datos están separados de los del navegador. Copiá el link, abrí la app y andá a Rutinas → Recibir → Pegar.' }),
       h('button', {
         class: 'btn secondary small', style: 'margin-top:8px;width:auto',
         onClick: async () => {

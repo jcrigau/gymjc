@@ -22,6 +22,7 @@ const BUNDLED_ROUTINES = [
 ];
 
 const CHANGELOG = [
+  ['1.18', 'Al recibir rutinas desde un link que se abrió en el navegador (y no en la app instalada), ahora avisa en grande que ese no es tu GymJC, para no importar en el lugar equivocado. El mensaje de WhatsApp indica copiar y pegar en la app en vez de tocar el link.'],
   ['1.17', 'Compartir rutinas con otras personas. En Rutinas hay dos botones nuevos: "Compartir" (una rutina se pasa por QR o link; varias juntas, por link de WhatsApp o mail) y "Recibir" (escaneás el QR con la cámara desde la app, o pegás el link). Viajan con el peso, series, repeticiones y descanso, y también los ejercicios propios. Funciona sin internet.'],
   ['1.16', 'Las rutinas de Hipertrofia (Día A, B y C) ahora vienen incluidas: en Configuración → Importar rutinas aparecen arriba y se cargan con un toque, sin tener que pasar ningún archivo al teléfono.'],
   ['1.15', 'Protección de datos. (1) Nueva opción "Recuperar historial": lee el CSV que exporta la app y vuelve a cargar los entrenamientos que falten, sin duplicar ni borrar nada; también recrea tus ejercicios propios. (2) "Importar backup" ya no acepta un archivo de rutinas (eso dejaba el historial vacío), avisa cuántos entrenamientos va a reemplazar y pide confirmación. (3) Antes de cualquier reemplazo o reinicio se guarda una copia automática, y aparece "Deshacer el último reemplazo" para volver atrás.'],
