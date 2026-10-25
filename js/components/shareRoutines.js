@@ -152,7 +152,7 @@ async function showShareResult(routines) {
 
       h('button', {
         class: 'btn', onClick: async () => {
-          const text = `Te paso ${routines.length > 1 ? 'mis rutinas' : 'mi rutina'} de GymJC (${names}). NO toques el link: copiá este mensaje, abrí GymJC desde su ícono → Rutinas → Recibir → Pegar.\n${link}`;
+          const text = `Te paso ${routines.length > 1 ? 'mis rutinas' : 'mi rutina'} de GymJC (${names}).\n\nTocá el link, apretá "Copiar para la app", después abrí GymJC desde el ícono y tocá Recibir.\n${link}`;
           if (navigator.share) {
             try { await navigator.share({ title: 'Rutinas GymJC', text }); return; } catch (e) { if (e?.name === 'AbortError') return; }
           }
@@ -197,28 +197,82 @@ export async function receiveCode(raw, { fromScan = false } = {}) {
     return;
   }
 
-  // Abierto fuera de la app instalada (Safari, navegador de WhatsApp…):
-  // esos navegadores tienen su propio GymJC, aparte del de la app. Si además
-  // está vacío, casi seguro no es la app de la persona: avisar fuerte.
-  let before = null;
-  const vacia = !store.routines.length && !store.history.length;
-  if (!isInstalled() && (isIOS() || vacia)) {
-    const link = shareLink(code);
-    before = h('div', { class: 'card', style: 'border-color:var(--orange)' }, [
-      h('div', { style: 'font-weight:700;margin-bottom:4px', text: '⚠️ Esto se abrió en el navegador, no en tu app' }),
-      h('div', { class: 'small', text: vacia
-        ? 'Acá no hay ninguna rutina ni entrenamiento tuyo: este no es el GymJC que usás. NO importes acá. Copiá el link, abrí GymJC desde el ícono del inicio y andá a Rutinas → Recibir → Pegar.'
-        : 'Si usás GymJC desde el ícono del inicio, sus datos están separados de los del navegador. Copiá el link, abrí la app y andá a Rutinas → Recibir → Pegar.' }),
-      h('button', {
-        class: 'btn secondary small', style: 'margin-top:8px;width:auto',
-        onClick: async () => {
-          try { await navigator.clipboard.writeText(link); toast('Link copiado', 'success'); } catch { toast('No se pudo copiar'); }
-        },
-      }, [icon('copy'), 'Copiar link']),
-    ]);
-  }
+  const review = (before = null) =>
+    reviewAndImport(data, { title: 'Rutinas recibidas', before, onDone: fromScan ? offerAnotherScan : null });
 
-  reviewAndImport(data, { title: 'Rutinas recibidas', before, onDone: fromScan ? offerAnotherScan : null });
+  if (fromScan || isInstalled()) { review(); return; }
+
+  // Abierto en un navegador (Safari, el de WhatsApp…), que tiene su propio
+  // GymJC aparte de la app instalada. Si acá no hay nada, casi seguro no es
+  // el GymJC de la persona: en vez de la vista previa, la pantalla de paso.
+  const vacia = !store.routines.length && !store.history.length;
+  if (vacia) { openHandoffSheet(shareLink(code), review); return; }
+
+  // Con datos propios en el navegador, se importa acá pero con la salida a la app a mano.
+  review(isIOS() ? h('div', { class: 'card', style: 'border-color:var(--orange)' }, [
+    h('div', { style: 'font-weight:700;margin-bottom:4px', text: '⚠️ Esto se abrió en Safari' }),
+    h('div', { class: 'small', text: 'Si usás GymJC desde el ícono del inicio, sus datos están separados de estos. Para que entren en la app: copiá, abrila y tocá Recibir.' }),
+    copyButton(shareLink(code), { class: 'btn secondary small', style: 'margin-top:8px;width:auto' }),
+  ]) : null);
+}
+
+/** Botón que copia el link; si el navegador no deja, muestra el link para copiarlo a mano. */
+function copyButton(link, attrs, label = 'Copiar link') {
+  const btn = h('button', { ...attrs }, [icon('copy'), label]);
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast('Copiado', 'success');
+      btn.dispatchEvent(new CustomEvent('copied', { bubbles: true }));
+    } catch {
+      const area = h('textarea', { class: 'textarea', style: 'margin-top:8px;font-size:13px', readonly: '' }, [link]);
+      btn.after(area, h('div', { class: 'small muted', style: 'margin-top:4px', text: 'Mantené apretado el cuadro, "Seleccionar todo" y "Copiar".' }));
+      area.focus(); area.select();
+    }
+  });
+  return btn;
+}
+
+/**
+ * Pantalla de paso cuando el link se abrió en el navegador: un solo botón
+ * grande para copiar, y la indicación de abrir la app y tocar Recibir.
+ */
+function openHandoffSheet(link, importHere) {
+  openSheet({
+    title: 'Rutinas para GymJC',
+    subtitle: 'El link se abrió en el navegador, no en tu app.',
+    body: (api) => {
+      const paso2 = h('div', { class: 'card', style: 'display:none;border-color:var(--green)' }, [
+        h('div', { style: 'font-weight:700;margin-bottom:4px', text: '✓ Copiado. Ahora:' }),
+        h('div', { style: 'font-size:17px', text: '1. Abrí GymJC desde el ícono del inicio' }),
+        h('div', { style: 'font-size:17px;margin-top:4px', text: '2. Tocá Recibir' }),
+        h('div', { class: 'small muted', style: 'margin-top:6px', text: 'La app pega sola lo copiado y te muestra las rutinas.' }),
+      ]);
+      const copiar = copyButton(link, { class: 'btn', style: 'font-size:19px;padding:20px' }, 'Copiar para la app');
+      copiar.addEventListener('copied', () => { paso2.style.display = ''; copiar.classList.add('secondary'); });
+
+      return h('div', {}, [
+        h('div', { class: 'small muted', style: 'margin:0 4px 12px', text: 'Acá no hay ninguna rutina ni entrenamiento tuyo. Para que entren en tu app:' }),
+        copiar,
+        paso2,
+        h('button', {
+          class: 'btn ghost small', style: 'width:auto;padding:6px 0;margin-top:16px',
+          onClick: () => { api.close(); setTimeout(importHere, 360); },
+        }, ['No tengo la app instalada: usar GymJC acá']),
+      ]);
+    },
+  });
+}
+
+/**
+ * Botón Recibir: si hay un link de GymJC copiado, va directo a la vista
+ * previa; si no, abre la hoja con escanear / pegar.
+ */
+export async function quickReceive() {
+  let text = '';
+  try { text = await navigator.clipboard.readText(); } catch { /* sin permiso o vacío */ }
+  if (extractCode(text)) { receiveCode(text); return; }
+  openReceiveSheet();
 }
 
 /** Hoja de recibir: escanear o pegar. */
@@ -243,8 +297,12 @@ export function openReceiveSheet() {
         h('div', { class: 'grid-2', style: 'margin-top:10px' }, [
           h('button', {
             class: 'btn secondary', onClick: async () => {
-              try { area.value = await navigator.clipboard.readText(); }
-              catch { toast('Mantené apretado el cuadro y elegí Pegar'); area.focus(); }
+              let text = '';
+              try { text = await navigator.clipboard.readText(); }
+              catch { toast('Mantené apretado el cuadro y elegí Pegar'); area.focus(); return; }
+              // Si lo copiado ya es un link de GymJC, no hace falta tocar Abrir.
+              if (extractCode(text)) leer(text);
+              else { area.value = text; toast('Eso no es un link de GymJC'); }
             },
           }, [icon('copy'), 'Pegar']),
           h('button', {
