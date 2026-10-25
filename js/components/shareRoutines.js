@@ -1,8 +1,10 @@
 // Compartir y recibir rutinas entre teléfonos.
 //
 // Enviar: elegís una o varias rutinas → QR en pantalla para que el otro lo
-// escanee, o link para mandar por WhatsApp/mail.
-// Recibir: escanear el QR con la cámara DENTRO de la app, o pegar el link.
+// escanee (una rutina), un código corto GYM-… que se sube a un servicio de
+// archivos temporales (utils/mailbox.js), o un link para WhatsApp/mail.
+// Recibir: escribir el código, escanear el QR con la cámara DENTRO de la
+// app, o pegar el link.
 //
 // Por qué escanear dentro de la app: en iPhone, la app instalada en el inicio
 // tiene sus datos separados de Safari. Si el otro escanea con la cámara del
@@ -16,6 +18,14 @@ import { reviewAndImport, showProblem } from './importReview.js';
 import {
   buildShare, decodeRoutines, shareLink, extractCode, loadVendor,
 } from '../utils/share.js';
+import { sendEnvelope, fetchEnvelope, extractMailCode, TTL_DAYS } from '../utils/mailbox.js';
+
+// Sobre retirado pero todavía no importado (el servicio ya lo borró): se
+// guarda acá para que no se pierda si se cierra la vista previa.
+const PENDING_KEY = 'gymjc.sobre';
+const loadPending = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY)); } catch { return null; } };
+const savePending = (env) => { try { localStorage.setItem(PENDING_KEY, JSON.stringify(env)); } catch { /* sin espacio */ } };
+const clearPending = () => localStorage.removeItem(PENDING_KEY);
 
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -144,14 +154,19 @@ async function showShareResult(routines) {
     title: routines.length > 1 ? `${routines.length} rutinas` : routines[0].name,
     subtitle: qrNode
       ? 'Que la otra persona abra GymJC → Rutinas → Recibir → Escanear QR'
-      : 'Mandalas por WhatsApp o mail. Del otro lado: GymJC → Rutinas → Recibir → Pegar.',
-    body: () => h('div', {}, [
+      : 'Mandalas con un código por WhatsApp, o con el link.',
+    body: (api) => h('div', {}, [
       qrNode,
-      res.notesDropped ? h('div', { class: 'small muted', style: 'text-align:center;margin:8px 0', text: 'En el QR no van las notas del profe, para que se lea fácil (peso, series y descanso sí). El link de abajo lleva todo.' }) : null,
+      res.notesDropped ? h('div', { class: 'small muted', style: 'text-align:center;margin:8px 0', text: 'En el QR no van las notas del profe, para que se lea fácil (peso, series y descanso sí). El código y el link llevan todo.' }) : null,
       h('div', { class: 'small muted', style: 'text-align:center;margin:6px 0 14px', text: names }),
 
       h('button', {
-        class: 'btn', onClick: async () => {
+        class: 'btn', onClick: () => { api.close(); setTimeout(() => openSendCodeSheet(routines), 360); },
+      }, [icon('share'), 'Enviar con código']),
+      h('div', { class: 'small muted', style: 'text-align:center;margin:6px 0 12px', text: `Un código corto (GYM-…) que el otro escribe en Recibir. Lleva todo, incluidas las notas del profe. Se borra al retirarlo y vence a los ${TTL_DAYS} días.` }),
+
+      h('button', {
+        class: 'btn secondary', onClick: async () => {
           const text = `Te paso ${routines.length > 1 ? 'mis rutinas' : 'mi rutina'} de GymJC (${names}).\n\nTocá el link, apretá "Copiar para la app", después abrí GymJC desde el ícono y tocá Recibir.\n${link}`;
           if (navigator.share) {
             try { await navigator.share({ title: 'Rutinas GymJC', text }); return; } catch (e) { if (e?.name === 'AbortError') return; }
@@ -166,6 +181,117 @@ async function showShareResult(routines) {
         },
       }, [icon('copy'), 'Copiar link']),
     ]),
+  });
+}
+
+// ------------------------------------------------------- enviar con código
+/** Pide el nombre del que envía y sube el sobre. */
+function openSendCodeSheet(routines) {
+  openSheet({
+    title: 'Enviar con código',
+    subtitle: 'El otro lo escribe en GymJC → Rutinas → Recibir.',
+    body: (api) => {
+      const name = h('input', {
+        class: 'input', placeholder: 'Tu nombre', maxlength: '40',
+        value: store.settings.senderName || '',
+      });
+      const status = h('div', { class: 'small muted', style: 'margin:10px 4px 0;text-align:center' });
+      const go = h('button', { class: 'btn', style: 'margin-top:12px' }, [icon('share'), 'Generar código']);
+
+      go.addEventListener('click', async () => {
+        const from = name.value.trim();
+        if (!from) { toast('Poné tu nombre'); name.focus(); return; }
+        store.setSetting('senderName', from);
+        go.disabled = true;
+        status.textContent = 'Subiendo el sobre…';
+        try {
+          const res = await sendEnvelope(routines, from);
+          api.close();
+          setTimeout(() => showCodeResult(res, routines, from), 360);
+        } catch (err) {
+          api.close();
+          setTimeout(() => openSheet({
+            title: 'No se pudo enviar',
+            body: (a) => h('div', {}, [
+              h('div', { class: 'card', text: err.message || 'Falló la subida.' }),
+              err.errors?.length ? h('div', { class: 'card small muted' }, [
+                h('div', { style: 'font-weight:700;margin-bottom:4px', text: 'Detalle, por si hay que revisar el servicio' }),
+                ...err.errors.map((e) => h('div', { text: e })),
+              ]) : null,
+              h('div', { class: 'small muted', style: 'margin:8px 4px', text: 'Mientras tanto podés mandar el link de siempre desde Compartir.' }),
+              h('button', { class: 'btn secondary', style: 'margin-top:10px', onClick: () => a.close() }, ['Cerrar']),
+            ]),
+          }), 360);
+        }
+      });
+
+      return h('div', {}, [
+        h('div', { class: 'field' }, [h('label', { text: 'Tu nombre (lo ve el que recibe)' }), name]),
+        go,
+        status,
+      ]);
+    },
+  });
+}
+
+/** Muestra el código generado y las formas de mandarlo. */
+function showCodeResult({ code, provider }, routines, from) {
+  const names = routines.map((r) => r.name).join(', ');
+  const msg = `${from} te manda ${routines.length > 1 ? 'rutinas' : 'una rutina'} de GymJC (${names}).\n\nAbrí GymJC → Rutinas → Recibir y escribí este código:\n${code}\n\nVale ${TTL_DAYS} días.`;
+
+  openSheet({
+    title: 'Listo para mandar',
+    subtitle: `Guardado en ${provider}. Vale ${TTL_DAYS} días y se borra al retirarlo.`,
+    body: () => h('div', {}, [
+      h('div', { class: 'code-big', text: code }),
+      h('div', { class: 'small muted', style: 'text-align:center;margin:8px 0 14px', text: names }),
+      h('button', {
+        class: 'btn', onClick: async () => {
+          if (navigator.share) {
+            try { await navigator.share({ text: msg }); return; } catch (e) { if (e?.name === 'AbortError') return; }
+          }
+          location.href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+        },
+      }, [icon('share'), 'Mandar por WhatsApp']),
+      h('button', {
+        class: 'btn secondary', style: 'margin-top:10px', onClick: async () => {
+          try { await navigator.clipboard.writeText(code); toast('Código copiado', 'success'); }
+          catch { toast('No se pudo copiar: anotalo de la pantalla'); }
+        },
+      }, [icon('copy'), 'Copiar código']),
+    ]),
+  });
+}
+
+/** Retira un sobre por código y muestra la vista previa. */
+export async function receiveEnvelope(raw) {
+  const parsed = extractMailCode(raw);
+  if (!parsed) {
+    showProblem('No reconozco ese código', 'Tiene que tener la forma GYM-… tal como lo generó GymJC.');
+    return;
+  }
+  const wait = openSheet({
+    title: 'Buscando el sobre…',
+    subtitle: parsed.code,
+    body: () => h('div', { class: 'small muted', text: 'Un momento.' }),
+  });
+  let env;
+  try {
+    env = await fetchEnvelope(parsed.code);
+  } catch (err) {
+    wait.close();
+    setTimeout(() => showProblem('No se pudo retirar', err.message), 360);
+    return;
+  }
+  wait.close();
+  savePending({ from: env.from, at: env.at, data: env.data });
+  setTimeout(() => reviewPending({ from: env.from, data: env.data }, env.del), 360);
+}
+
+function reviewPending(pending, del = null) {
+  reviewAndImport(pending.data, {
+    title: pending.from ? `Rutinas de ${pending.from}` : 'Rutinas recibidas',
+    onDone: () => { clearPending(); if (del) del(); },
   });
 }
 
@@ -271,6 +397,7 @@ function openHandoffSheet(link, importHere) {
 export async function quickReceive() {
   let text = '';
   try { text = await navigator.clipboard.readText(); } catch { /* sin permiso o vacío */ }
+  if (extractMailCode(text)) { receiveEnvelope(text); return; }
   if (extractCode(text)) { receiveCode(text); return; }
   openReceiveSheet();
 }
@@ -281,18 +408,57 @@ export function openReceiveSheet() {
     title: 'Recibir rutinas',
     subtitle: 'Se suman a las tuyas. No se borra nada.',
     body: (api) => {
+      // Lo que llegue (código o link) va al lugar que corresponda.
+      const leer = (text) => {
+        api.close();
+        setTimeout(() => (extractMailCode(text) ? receiveEnvelope(text) : receiveCode(text)), 360);
+      };
+
+      // --- con código ---
+      // Sin autocorrección ni mayúsculas automáticas: en algunos servicios la
+      // clave distingue mayúsculas de minúsculas y hay que escribirla igual.
+      const codeInput = h('input', {
+        class: 'input code-input', placeholder: 'GYM-…',
+        autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off', spellcheck: 'false',
+      });
+      const buscar = () => {
+        const t = codeInput.value.trim();
+        if (!t) { toast('Escribí el código'); codeInput.focus(); return; }
+        const full = /^gym-/i.test(t) ? 'GYM-' + t.slice(4) : 'GYM-' + t;
+        if (!extractMailCode(full)) { toast('Ese código no tiene la forma GYM-…'); return; }
+        leer(full);
+      };
+      codeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
+
+      // --- con link ---
       const area = h('textarea', {
-        class: 'textarea', style: 'min-height:90px;font-size:14px',
+        class: 'textarea', style: 'min-height:80px;font-size:14px',
         placeholder: 'Pegá acá el link que te mandaron…',
       });
-      const leer = (text) => { api.close(); setTimeout(() => receiveCode(text), 360); };
+
+      const pendiente = loadPending();
 
       return h('div', {}, [
+        pendiente ? h('div', { class: 'card', style: 'border-color:var(--orange)' }, [
+          h('div', { style: 'font-weight:700', text: `Rutinas de ${pendiente.from || 'alguien'} sin importar` }),
+          h('div', { class: 'small muted', style: 'margin-top:2px', text: 'Las retiraste pero no las importaste. El sobre ya no está en el servicio: importalas desde acá.' }),
+          h('button', {
+            class: 'btn secondary small', style: 'margin-top:8px;width:auto',
+            onClick: () => { api.close(); setTimeout(() => reviewPending(pendiente), 360); },
+          }, [icon('check'), 'Ver e importar']),
+        ]) : null,
+
+        h('div', { class: 'section-title', style: 'margin:0 4px 8px', text: 'Con código' }),
+        codeInput,
+        h('div', { class: 'small muted', style: 'margin:6px 4px 0', text: 'Escribilo igual, con sus mayúsculas y minúsculas. Más fácil: copiá el mensaje de WhatsApp y tocá Recibir.' }),
+        h('button', { class: 'btn', style: 'margin-top:10px', onClick: buscar }, [icon('check'), 'Buscar el sobre']),
+
+        h('div', { class: 'section-title', style: 'margin:20px 4px 8px', text: 'Con QR (cara a cara)' }),
         h('button', {
-          class: 'btn', onClick: () => { api.close(); setTimeout(openScanner, 360); },
+          class: 'btn secondary', onClick: () => { api.close(); setTimeout(openScanner, 360); },
         }, [icon('camera'), 'Escanear QR']),
 
-        h('div', { class: 'section-title', style: 'margin:20px 4px 8px', text: 'O pegá el link' }),
+        h('div', { class: 'section-title', style: 'margin:20px 4px 8px', text: 'Con link' }),
         area,
         h('div', { class: 'grid-2', style: 'margin-top:10px' }, [
           h('button', {
@@ -300,9 +466,9 @@ export function openReceiveSheet() {
               let text = '';
               try { text = await navigator.clipboard.readText(); }
               catch { toast('Mantené apretado el cuadro y elegí Pegar'); area.focus(); return; }
-              // Si lo copiado ya es un link de GymJC, no hace falta tocar Abrir.
-              if (extractCode(text)) leer(text);
-              else { area.value = text; toast('Eso no es un link de GymJC'); }
+              // Si lo copiado ya es un código o un link de GymJC, no hace falta tocar Abrir.
+              if (extractMailCode(text) || extractCode(text)) leer(text);
+              else { area.value = text; toast('Eso no es un código ni un link de GymJC'); }
             },
           }, [icon('copy'), 'Pegar']),
           h('button', {

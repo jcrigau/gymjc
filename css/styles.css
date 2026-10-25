@@ -610,6 +610,27 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   pointer-events: none;
 }
 
+/* Código de envío (GYM-xxxx) */
+.code-big {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 32px; font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: center;
+  padding: 18px 10px;
+  border-radius: var(--radius);
+  background: var(--bg-elev-2);
+  border: 1px dashed var(--accent);
+  user-select: text; -webkit-user-select: text;
+  overflow-wrap: anywhere;
+}
+.code-input {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 22px; font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: none;
+}
+
 /* Ejercicio empezado pero sin cerrar */
 .check.partial { border-color: var(--accent); border-style: dashed; }
 .check.partial .ic { display: none; }
