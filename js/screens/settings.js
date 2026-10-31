@@ -23,6 +23,7 @@ const BUNDLED_ROUTINES = [
 ];
 
 const CHANGELOG = [
+  ['1.24', 'Corregir registros: si anotaste un ejercicio creyendo que era otro, en Ejercicios → el ejercicio → "Corregir registros" marcás las veces que estaban mal y elegís el ejercicio que hiciste de verdad. Se pasan con su peso, series y notas, y opcionalmente también en tus rutinas. Se puede deshacer desde Ajustes.'],
   ['1.23', 'Los 162 ejercicios de la biblioteca tienen su "Cómo se hace" (antes eran 39). Al crear un ejercicio, la app avisa si ya existe con otro nombre (estocadas = zancadas, mariposa = pec deck, pantorrillas = gemelos…) y te deja usar el existente con tu nombre. Cualquier ejercicio se puede renombrar solo para vos, y uno creado a mano se puede unir con el de la biblioteca que es el mismo, con todo su historial. Ajustes → Ejercicios sin ficha arma la lista para mandar. Progreso nuevo: elegís el período y lo compara con el anterior, entrenamientos por semana, racha, series por grupo muscular, récords, ejercicios estancados o al límite, fuerza estimada y últimas veces con notas. Y el botón Informe para el profe arma un resumen listo para WhatsApp.'],
   ['1.22', 'Las pantallas de enviar y recibir con código ya no muestran la dirección del buzón.'],
   ['1.21', 'Enviar con código ahora usa un buzón propio en vez de servicios ajenos, que no dejaban que la app los usara desde el teléfono. El código son 6 letras o números, sin distinguir mayúsculas. Todo lo demás igual: el sobre lleva las notas del profe, se entrega una sola vez y vence a los 7 días.'],

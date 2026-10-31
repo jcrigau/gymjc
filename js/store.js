@@ -116,6 +116,48 @@ export const store = {
   },
 
   /**
+   * "Corregir registros": lo anotado como `fromId` en realidad era `toId`.
+   * `keys` son los registros elegidos ("idDeSesión|posición"). Les cambia el
+   * ejercicio (y el nombre guardado, para que el historial no muestre el
+   * equivocado). Con `routines`, también cambia el ejercicio en las rutinas:
+   * si la rutina ya tenía `toId`, saca `fromId`; el objetivo del profe pasa
+   * sin la nota, que era del otro ejercicio. No borra ningún ejercicio.
+   * Guarda antes una copia para poder deshacer desde Ajustes.
+   */
+  moveEntries(fromId, to, keys, { routines = false } = {}) {
+    if (!fromId || !to || !to.id || fromId === to.id) return 0;
+    const elegidos = new Set(keys);
+    this.keepSafetyCopy();
+    let moved = 0;
+    for (const s of db.history) {
+      (s.entries || []).forEach((e, i) => {
+        if (e.exerciseId !== fromId || !elegidos.has(`${s.id}|${i}`)) return;
+        e.exerciseId = to.id;
+        e.name = to.name;
+        e.group = to.group;
+        moved++;
+      });
+    }
+    if (routines) {
+      for (const r of db.routines) {
+        if (!Array.isArray(r.exercises) || !r.exercises.includes(fromId)) continue;
+        r.exercises = r.exercises.includes(to.id)
+          ? r.exercises.filter((id) => id !== fromId)
+          : r.exercises.map((id) => (id === fromId ? to.id : id));
+        if (r.targets && r.targets[fromId]) {
+          if (!r.targets[to.id]) {
+            const { note, ...sinNota } = r.targets[fromId];
+            r.targets[to.id] = sinNota;
+          }
+          delete r.targets[fromId];
+        }
+      }
+    }
+    persist();
+    return moved;
+  },
+
+  /**
    * "Es el mismo ejercicio": pasa todo lo del ejercicio `fromId` (uno creado a
    * mano) a `toId` — historial, rutinas, metas del profe y favoritos — y borra
    * el duplicado. Guarda antes una copia para poder deshacer desde Ajustes.

@@ -10,6 +10,7 @@ import { fmtEntry } from '../utils/format.js';
 import { openTechniqueSheet, hasTechnique } from '../components/techniqueSheet.js';
 import { lookalikeBox, useExisting, openRenameSheet, openMergeFlow, confirmMerge } from '../components/exerciseNames.js';
 import { findLookalikes } from '../utils/lookalike.js';
+import { openFixEntries, entriesOf } from '../components/fixEntries.js';
 
 function norm(s) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -98,6 +99,12 @@ function openExerciseDetail(ex, onChange) {
             }, [icon('swap'), 'Es el mismo que…'])
             : h('div'),
         ]),
+        // Anotaste este ejercicio creyendo que era otro: se corrigen las veces
+        // que elijas, sin tocar las demás.
+        entriesOf(ex.id).length ? h('button', {
+          class: 'btn secondary', style: 'margin-top:10px',
+          onClick: () => { api.close(); openFixEntries(ex, { onChange, openPicker: openExercisePicker }); },
+        }, [icon('history'), 'Corregir registros (era otro ejercicio)']) : null,
         h('div', { class: 'grid-2', style: 'margin-top:10px' }, [
           h('button', {
             class: 'btn secondary',

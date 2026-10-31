@@ -37,8 +37,9 @@ export const ALIASES = {
   'subida al cajón': 'step up',
   'estocada': 'zancadas',
   'estocadas': 'zancadas',
-  'isquiotibiales en maquina': 'curl femoral sentado',
-  'izquiotobiales en maquina': 'curl femoral sentado', // error de tipeo del original
+  // "Isquiotibiales en máquina" NO es el curl femoral sentado (corregido el
+  // 31/10/2026: el gimnasio del usuario no tiene esa máquina). Sin alias: la
+  // app no lo da por igual a ninguno; el usuario decide con "Es el mismo que…".
   // OJO: el usuario confirmó que sus "vuelos laterales" eran PÁJAROS (hombro
   // posterior, inclinado), no elevaciones laterales. Las elevaciones laterales
   // del plan nuevo entran por su propio nombre, así que no se pisan.
@@ -54,9 +55,7 @@ export const ALIASES = {
   'prensa': 'prensa de piernas',
   'leg press': 'prensa de piernas',
   'sillon de cuadriceps': 'extension de cuadriceps',
-  'camilla de femorales': 'curl femoral sentado',
-  'curl femoral': 'curl femoral sentado',
-  'femorales en maquina': 'curl femoral sentado',
+  'camilla de femorales': 'curl femoral tumbado',  // camilla = acostado boca abajo
   'polea al pecho': 'jalon al pecho',
   'dorsalera': 'jalon al pecho',
   'remo bajo': 'remo en polea baja',
