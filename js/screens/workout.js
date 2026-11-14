@@ -13,7 +13,7 @@ import { openExercisePicker } from './library.js';
 import { openTechniqueSheet, hasTechnique } from '../components/techniqueSheet.js';
 import { startRest, stopRest, primeAudio, beep } from '../components/restTimer.js';
 import { similarTo } from '../data/similar.js';
-import { keepScreenAwake, releaseScreen } from '../utils/wakeLock.js';
+import { keepScreenAwake, ensureScreenAwake, releaseScreen } from '../utils/wakeLock.js';
 import { onScreenLeave } from '../app.js';
 
 /** Stepper numérico grande y táctil. */
@@ -42,6 +42,9 @@ function stepper({ value = 0, step = 1, min = 0, max = 999, decimals = 0 }) {
  */
 function openEntrySheet(exercise, session, ctx = {}) {
   const { onSaved, target, exclude = new Set(), onSwap, onMore } = ctx;
+  // Abrir un ejercicio es un toque del usuario: buen momento para recuperar
+  // el bloqueo de pantalla si el sistema lo soltó.
+  ensureScreenAwake();
   const existing = (session.entries || []).find((e) => e.exerciseId === exercise.id);
   // Cronómetro de los ejercicios por tiempo: se corta si se cierra la hoja.
   let swTick = null;
@@ -223,6 +226,7 @@ function openEntrySheet(exercise, session, ctx = {}) {
       function startStopwatch() {
         primeAudio();          // el aviso sonoro necesita un toque del usuario
         stopRest();            // si arrancás la serie, el descanso terminó
+        ensureScreenAwake();   // que no se apague a mitad de la serie por tiempo
         swStart = Date.now();
         reached = false;
         stopwatch.classList.add('running');
@@ -408,6 +412,10 @@ function openEntrySheet(exercise, session, ctx = {}) {
 
             onSaved(buildEntry({ partial: undefined, pr: isPR || undefined }));
             api.close();
+
+            // Si el teléfono no dejó guardar, el aviso fijo de arriba lo
+            // explica: no se festeja un registro que no quedó guardado.
+            if (store.health.saveError || store.health.loadError) return;
 
             if (isPR) {
               if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 160]);
@@ -648,6 +656,12 @@ export default function WorkoutScreen(params) {
           session.durationSec = Math.round((Date.now() - session.startedAt) / 1000);
           store.saveSession(session);
           stopRest();
+          // Sin guardar no se sale: en esta pantalla el entrenamiento sigue en
+          // memoria y todavía se puede sacar un backup desde el aviso.
+          if (store.health.saveError || store.health.loadError) {
+            toast('No se pudo guardar. Tocá el aviso rojo de arriba');
+            return;
+          }
           toast(`¡Entrenamiento guardado! ${fmtClock(session.durationSec)}`, 'success');
           navigate('home');
         },

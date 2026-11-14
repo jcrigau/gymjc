@@ -11,6 +11,7 @@ import { reviewAndImport } from '../components/importReview.js';
 import { PLAN_PROFE } from '../data/planProfe.js';
 import { planRestore, applyRestore } from '../utils/restore.js';
 import { openMissingSheets, missingSheets } from '../components/missingSheets.js';
+import { shareRescue } from '../components/dataGuard.js';
 
 // Rutinas que viajan con la app (carpeta _rutinas). Para sumar una nueva:
 // dejar el .json en esa carpeta, agregarla acá y a ASSETS en sw.js.
@@ -23,6 +24,7 @@ const BUNDLED_ROUTINES = [
 ];
 
 const CHANGELOG = [
+  ['1.25', 'Datos más protegidos. (1) Si la app no puede leer lo guardado, ya no arranca vacía ni pisa nada: avisa, deja todo intacto y te ofrece seguir con una copia automática, descargar los datos o empezar de cero. (2) Si el teléfono no deja guardar (por ejemplo, sin espacio), aparece un aviso fijo arriba y podés sacar un backup en el momento. (3) En Inicio te recuerda hacer un backup cuando se juntan entrenamientos sin respaldar. (4) Fecha corregida: los entrenamientos después de las 21:00 se anotaban con la fecha del día siguiente. (5) Pantalla encendida: al volver a la app después de usar otra, o al arrancar el cronómetro de un ejercicio por tiempo, se vuelve a pedir que no se apague (en iPhone necesita iOS 18.4 o más nuevo).'],
   ['1.24', 'Corregir registros: si anotaste un ejercicio creyendo que era otro, en Ejercicios → el ejercicio → "Corregir registros" marcás las veces que estaban mal y elegís el ejercicio que hiciste de verdad. Se pasan con su peso, series y notas, y opcionalmente también en tus rutinas. Se puede deshacer desde Ajustes.'],
   ['1.23', 'Los 162 ejercicios de la biblioteca tienen su "Cómo se hace" (antes eran 39). Al crear un ejercicio, la app avisa si ya existe con otro nombre (estocadas = zancadas, mariposa = pec deck, pantorrillas = gemelos…) y te deja usar el existente con tu nombre. Cualquier ejercicio se puede renombrar solo para vos, y uno creado a mano se puede unir con el de la biblioteca que es el mismo, con todo su historial. Ajustes → Ejercicios sin ficha arma la lista para mandar. Progreso nuevo: elegís el período y lo compara con el anterior, entrenamientos por semana, racha, series por grupo muscular, récords, ejercicios estancados o al límite, fuerza estimada y últimas veces con notas. Y el botón Informe para el profe arma un resumen listo para WhatsApp.'],
   ['1.22', 'Las pantallas de enviar y recibir con código ya no muestran la dirección del buzón.'],
@@ -103,6 +105,7 @@ function openExportSheet() {
         const file = backupFile();
         const res = await shareOrDownload([file], { title: 'GymJC · backup' });
         if (res === 'cancelled') return;
+        store.markBackup(); // el recordatorio de Inicio vuelve a contar desde acá
         api.close();
         toast(res === 'shared' ? 'Backup compartido' : 'Backup descargado', 'success');
       }),
@@ -396,6 +399,7 @@ export default function SettingsScreen() {
     row('history', 'Recuperar historial', 'Desde un CSV exportado antes. Suma lo que falte', restoreHistory, '#bf5af2'),
     row('upload', 'Importar backup (JSON)', 'Reemplaza TODOS tus datos por los del archivo', importJSON, '#8e8e93'),
     store.safetyCopy() ? row('restart', 'Deshacer el último reemplazo', 'Vuelve a los datos que había antes', undoReplace, '#ff9f0a') : null,
+    store.rescueCopy() ? row('download', 'Datos a recuperar', 'Lo que la app no pudo leer, guardado aparte. Descargalo para recuperarlo', () => shareRescue(store.rescueCopy()), '#ff9f0a') : null,
     row('restart', 'Restablecer datos', 'Borra todo sin posibilidad de deshacer', () => {
       if (confirm('¿Seguro? Se borrarán todas las rutinas y el historial.')) { store.reset(); applyTheme(); location.hash = '#/home'; location.reload(); }
     }, '#ff453a'),

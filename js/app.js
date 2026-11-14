@@ -12,6 +12,7 @@ import HistoryScreen from './screens/history.js';
 import StatsScreen from './screens/stats.js';
 import SettingsScreen from './screens/settings.js';
 import { receiveCode } from './components/shareRoutines.js';
+import { initDataGuard } from './components/dataGuard.js';
 import { navigate } from './router.js';
 
 // Link de rutinas compartidas (#/recibir/<código>): se pasa a Rutinas y se
@@ -25,7 +26,7 @@ function ReceiveScreen(params) {
   return document.createElement('div');
 }
 
-export const VERSION = '1.24';
+export const VERSION = '1.25';
 
 const SCREENS = {
   home: HomeScreen,
@@ -88,6 +89,10 @@ function init() {
 
   onRoute(render);
   startRouter();
+
+  // Después del primer render: avisa si lo guardado no se pudo leer o si un
+  // guardado falla, en vez de seguir como si nada.
+  initDataGuard({ onChange: rerender });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => registerSW());

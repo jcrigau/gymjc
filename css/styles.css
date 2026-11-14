@@ -352,6 +352,29 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 .sheet-title { font-size: 22px; font-weight: 800; margin: 0 4px 4px; }
 .sheet-sub { color: var(--text-2); font-size: 15px; margin: 0 4px 16px; }
 
+/* ----------------- Aviso fijo: problema con el guardado ------------------ */
+.data-alert {
+  position: fixed;
+  top: calc(var(--safe-top) + 8px);
+  left: 12px; right: 12px;
+  max-width: 616px;
+  margin: 0 auto;
+  z-index: 150;                 /* sobre la barra inferior, bajo las hojas */
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--red);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.data-alert .small { font-weight: 500; opacity: 0.9; }
+.data-alert .ic { flex-shrink: 0; font-size: 22px; }
+/* Corre el contenido para que el aviso no tape el título de la pantalla. */
+.has-data-alert .screen { padding-top: calc(var(--safe-top) + 76px); }
+
 /* ------------------------------ Toast ------------------------------------ */
 .toast-wrap {
   position: fixed;
