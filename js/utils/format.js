@@ -4,9 +4,19 @@ const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'o
 const MESES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
+/** Fecha "YYYY-MM-DD" según el reloj del teléfono (hora local). */
+export function localISO(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/**
+ * Fecha de hoy en el teléfono. No usar toISOString(): devuelve la fecha en
+ * UTC, y en Argentina (UTC-3) desde las 21:00 ya es "mañana". Eso anotaba los
+ * entrenamientos de la noche con la fecha del día siguiente.
+ */
 export function todayISO() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
+  return localISO(new Date());
 }
 
 /** "2026-07-04" -> "4 jul" */

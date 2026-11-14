@@ -2,7 +2,7 @@
 // y edición/eliminación de registros.
 import { store } from '../store.js';
 import { h, icon, clear } from '../utils/dom.js';
-import { fmtLong, fmtShort, relative, fmtEntry, fmtWeight, entryVolume, fmtClock } from '../utils/format.js';
+import { fmtLong, fmtShort, relative, fmtEntry, fmtWeight, entryVolume, fmtClock, todayISO } from '../utils/format.js';
 import { exerciseById } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
 import { toast } from '../components/toast.js';
@@ -122,7 +122,7 @@ function calendar(ref, sessionsByDate, onPick, selected) {
     const first = new Date(y, m, 1);
     const offset = (first.getDay() + 6) % 7; // lunes primero
     const days = new Date(y, m + 1, 0).getDate();
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = todayISO();
     for (let i = 0; i < offset; i++) grid.appendChild(h('div', { class: 'cal-day empty-day' }));
     for (let d = 1; d <= days; d++) {
       const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;

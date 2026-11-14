@@ -1,11 +1,13 @@
 // Pantalla de inicio: versión, rutinas, último entrenamiento y CTA principal.
 import { store } from '../store.js';
-import { VERSION } from '../app.js';
+import { VERSION, rerender } from '../app.js';
 import { h, icon, hapticTap } from '../utils/dom.js';
 import { relative, fmtShort, todayISO } from '../utils/format.js';
 import { navigate } from '../router.js';
 import { groupMeta } from '../data/exercises.js';
 import { openSheet } from '../components/sheet.js';
+import { toast } from '../components/toast.js';
+import { backupFile, shareOrDownload } from '../utils/export.js';
 
 
 function routineIconBadge(r) {
@@ -34,6 +36,41 @@ function startWorkoutFlow() {
       )
     ),
   });
+}
+
+/**
+ * Recordatorio de backup. Los datos viven solo en este teléfono: aparece
+ * cuando se juntan entrenamientos sin respaldar y se va al guardar el backup
+ * (o por una semana con "Más tarde").
+ */
+function backupReminder() {
+  const st = store.backupStatus();
+  if (!st.due) return null;
+  const n = st.pending;
+  const title = st.never
+    ? 'Todavía no guardaste ningún backup'
+    : `Hace ${st.days} día${st.days === 1 ? '' : 's'} que no guardás un backup`;
+  const sub = `${n} entrenamiento${n === 1 ? '' : 's'} ${n === 1 ? 'está' : 'están'} solo en este teléfono. Si se pierde o se rompe, no hay de dónde recuperarlos.`;
+  return h('div', { class: 'card', style: 'margin-top:14px;border-color:var(--orange)' }, [
+    h('div', { style: 'font-weight:700', text: title }),
+    h('div', { class: 'small muted', style: 'margin-top:4px', text: sub }),
+    h('div', { style: 'display:flex;gap:8px;margin-top:12px' }, [
+      h('button', {
+        class: 'btn small', style: 'flex:1',
+        onClick: async () => {
+          const res = await shareOrDownload([backupFile()], { title: 'GymJC · backup' });
+          if (res === 'cancelled') return;
+          store.markBackup();
+          toast(res === 'shared' ? 'Backup compartido' : 'Backup descargado', 'success');
+          rerender();
+        },
+      }, [icon('upload'), 'Guardar backup']),
+      h('button', {
+        class: 'btn secondary small',
+        onClick: () => { store.snoozeBackup(); rerender(); },
+      }, ['Más tarde']),
+    ]),
+  ]);
 }
 
 export default function HomeScreen() {
@@ -65,6 +102,9 @@ export default function HomeScreen() {
       icon('play'), 'Comenzar entrenamiento',
     ]));
   }
+
+  const reminder = backupReminder();
+  if (reminder) screen.appendChild(reminder);
 
   // Último entrenamiento
   screen.appendChild(h('div', { class: 'section-title', text: 'Entrenamiento reciente' }));
